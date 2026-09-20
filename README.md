@@ -1,4 +1,4 @@
-# AstroBitPlays.me 🎮
+# astrobitplays.me 🎮
 
 The official gaming portal, reviews, walkthroughs, and creator hub for **AstroBitPlays** (`@astrobitplayss` on YouTube and `@astrobitplays` across socials).
 
