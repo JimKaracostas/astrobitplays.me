@@ -1,64 +1,44 @@
-# AstroBitPlays.me 🎮
+# AstroBitPlays
 
-The official gaming portal, reviews, walkthroughs, and creator hub for **AstroBitPlays** (`@astrobitplayss` on YouTube and `@astrobitplays` across socials).
+Gaming news, reviews, guides and videos for [astrobitplays.me](https://astrobitplays.me). React, TypeScript, Vite and Supabase. The site starts without sample articles or invented statistics.
 
-Live Domain: [https://astrobitplays.me](https://astrobitplays.me)  
-Repository: [https://github.com/JimKaracostas/astrobitplays.me](https://github.com/JimKaracostas/astrobitplays.me)
+## Run
 
----
+```sh
+npm ci
+npm run dev -- --host 127.0.0.1 --port 5173
+```
 
-## ⚡ Features
+Copy `.env.example` to `.env.local` and set the Supabase URL and public publishable key. The local environment is gitignored. See [Supabase setup](docs/SUPABASE-SETUP.md) for authentication, owner assignment and deployment configuration.
 
-- **Gaming Magazine Layout**: Inspired by professional gaming portals (GAMXO, Unboxholics, IGN) with high-contrast dark slate styling and crimson accents.
-- **Star Rating Reviews**: Comprehensive game reviews with customizable star scores (e.g. `9.2 ★ / 10`) and verdict breakdowns.
-- **Creator Studio & Dashboard**:
-  - Dedicated dashboard just for Jim / AstroBitPlays.
-  - Create, edit, and delete reviews, walkthroughs, news, and guides.
-  - Live preview of cards and embedded YouTube video player before publishing.
-  - Draft vs Published status controls.
-  - Real reader view counter tracking.
-- **Integrated YouTube Player**: Seamless embed supporting standard YouTube URLs, `youtu.be`, and YouTube Shorts.
-- **Accounts & Roles**: Creator admin privileges (`astrobitplays`) and member accounts with saved bookmarks.
-- **Zero Mock Data**: Clean initial slate so every post on the site is 100% created and curated by the creator.
-- **Authentic Social Links**: Direct links to YouTube (`@astrobitplayss`), Twitch, X/Twitter, Instagram, and TikTok (`@astrobitplays`).
-- **Automated GitHub Pages Deployment**: Fully configured `.github/workflows/deploy.yml` workflow deploying directly to `astrobitplays.me`.
+## Features
 
----
+- Responsive editorial homepage using the supplied logo and a galaxy-only placeholder derived from its background.
+- News, Reviews, Guides and Videos categories; full-text client search; article pages.
+- Google and email-link sign-in, reader accounts and private bookmarks.
+- One database-designated owner with a private publishing dashboard.
+- Markdown editor and preview, covers, YouTube embeds, scores, featured posts, drafts and unpublishing.
+- Recorded article-read totals and last-30-day counts. No simulated analytics.
 
-## 🛠️ Tech Stack
+## Checks
 
-- **React 19** + **TypeScript**
-- **Vite**
-- **Tailwind CSS v4** (`@tailwindcss/vite`)
-- **Lucide Icons**
-- **Canvas Confetti**
-
----
-
-## 🚀 Running Locally
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build production bundle for astrobitplays.me
+```sh
+npm test
+npm run lint
 npm run build
 ```
 
----
+Permission tests run in disposable in-memory PostgreSQL and never add test data to the real project. Node 22.18+ is recommended. The database migration must be applied separately in Supabase. Google OAuth and the first owner assignment require project-owner setup.
 
-## 🌐 Custom Domain & GitHub Pages Setup
+## Deployment
 
-The project includes `CNAME` configured for `astrobitplays.me`.
+The existing GitHub Pages workflow deploys pushes to `main`. Set repository Actions variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` before deploying. The custom domain is preserved in `CNAME` and `public/CNAME`. Article links use query parameters so they can be opened directly on static hosting.
 
-DNS records (Namecheap):
-- **A Records (@)**:
-  - `185.199.108.153`
-  - `185.199.109.153`
-  - `185.199.110.153`
-  - `185.199.111.153`
-- **CNAME (www)**:
-  - `astrobitplays.me` (or `JimKaracostas.github.io`)
+Articles are client rendered. Server-rendered article metadata and unique social preview images are not implemented. Read counts are deduplicated per browser session/day, not verified unique visitors. See the setup guide for these limits and email-delivery requirements.
+
+## Assets
+
+- `public/logo.png`: user's supplied original.
+- `public/galaxy-placeholder.png`: generated with the built-in Image Generation tool from the logo background. Prompt: remove AB lettering, orbit and central emblem; fill naturally with the existing restrained black/navy galaxy and blue stars, with no text, planets or neon.
+
+No deployment is performed automatically by local development commands.
