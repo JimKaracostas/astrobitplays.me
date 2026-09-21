@@ -162,6 +162,7 @@ export function App() {
         {posts.filter(item => item.id !== lead?.id && item.category !== 'Reviews').length > 0 && <section className="more-stories"><SectionTitle>More stories</SectionTitle><div className="post-grid">{posts.filter(item => item.id !== lead?.id && item.category !== 'Reviews').slice(0, 6).map(item => <PostCard key={item.id} post={item} />)}</div></section>}
       </>}
     </main>
+    <footer className="site-footer"><div><a className="footer-brand" href="/">ASTROBIT<b>PLAYS</b></a><nav aria-label="Social and legal links"><a href="https://youtube.com/@astrobitplayss" target="_blank" rel="noreferrer">YouTube</a><a href="https://twitch.tv/astrobitplays" target="_blank" rel="noreferrer">Twitch</a><a href="https://x.com/astrobitplays" target="_blank" rel="noreferrer">X</a><a href="https://instagram.com/astrobitplays" target="_blank" rel="noreferrer">Instagram</a><a href="https://tiktok.com/@astrobitplays" target="_blank" rel="noreferrer">TikTok</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></nav></div></footer>
     {signIn && <SignIn onClose={() => setSignIn(false)} />}
   </>
 }

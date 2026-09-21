@@ -348,7 +348,8 @@ a:hover h3,
 
 .site-footer nav {
     display: flex;
-    gap: 24px;
+    flex-wrap: wrap;
+    gap: 16px 24px;
     color: var(--muted);
     font-size: 14px
 }
