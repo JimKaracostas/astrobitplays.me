@@ -1,7 +1,9 @@
-<<<<<<< HEAD
-# AstroBitPlays
+# astrobitplays.me 🎮
 
 Gaming news, reviews, guides and videos for [astrobitplays.me](https://astrobitplays.me). React, TypeScript, Vite and Supabase. The site starts without sample articles or invented statistics.
+
+Live Domain: [https://astrobitplays.me](https://astrobitplays.me)  
+Repository: [https://github.com/JimKaracostas/astrobitplays.me](https://github.com/JimKaracostas/astrobitplays.me)
 
 ## Run
 
@@ -40,14 +42,6 @@ Articles are client rendered. Server-rendered article metadata and unique social
 ## Assets
 
 - `public/logo.png`: user's supplied original.
-- `public/galaxy-placeholder.png`: generated with the built-in Image Generation tool from the logo background. Prompt: remove AB lettering, orbit and central emblem; fill naturally with the existing restrained black/navy galaxy and blue stars, with no text, planets or neon.
+- `public/galaxy-placeholder.png`: generated from the logo background. Prompt: remove AB lettering, orbit and central emblem; fill naturally with the existing restrained black/navy galaxy and blue stars, with no text, planets or neon.
 
 No deployment is performed automatically by local development commands.
-=======
-# astrobitplays.me 🎮
-
-The official gaming portal, reviews, walkthroughs, and creator hub for **AstroBitPlays**.
-
-Live Domain: [https://astrobitplays.me](https://astrobitplays.me)  
-Repository: [https://github.com/JimKaracostas/astrobitplays.me](https://github.com/JimKaracostas/astrobitplays.me)
->>>>>>> 9dfb3a0afe08da1550cf691d21983c89ea46059a
