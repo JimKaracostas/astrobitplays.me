@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { ArrowLeft, Plus, Eye, Pencil, Upload } from 'lucide-react'
+import { ArrowLeft, Plus, Eye, Pencil, Upload, ExternalLink } from 'lucide-react'
 import { database } from './lib/supabase'
 import { categories, formatDate, placeholder, safeImage, slugify, validatePost, youtubeId } from './lib/content'
 import type { Post, PostInput } from './lib/content'
@@ -43,13 +43,28 @@ export function Studio() {
     <div className="stats-grid"><div><span>Published posts</span><strong>{loading ? '—' : posts.filter(p => p.status === 'published').length}</strong></div><div><span>Drafts</span><strong>{loading ? '—' : posts.filter(p => p.status === 'draft').length}</strong></div><div><span>Article reads</span><strong>{loading || !stats ? '—' : stats.reduce((sum, item) => sum + Number(item.total_views), 0)}</strong></div><div><span>Reads · last 30 days</span><strong>{loading || !stats ? '—' : stats.reduce((sum, item) => sum + Number(item.recent_views), 0)}</strong></div></div>
     <p className="stats-note">Reads count each browser session once per article per day. Your own reads are excluded. These counts are estimates, not unique people.</p>
     <div className="posts-toolbar"><h2>Your posts</h2><label>Show<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All posts</option><option value="draft">Drafts</option><option value="published">Published</option></select></label></div>
-    {loading ? <p role="status">Loading posts…</p> : visible.length ? <div className="table-wrap"><table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Reads</th><th>Updated</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{visible.map(post => <tr key={post.id}><td>{post.title}</td><td>{post.category}</td><td><span className={`post-status ${post.status}`}>{post.status}</span></td><td>{stats ? Number(stats.find(item => item.post_id === post.id)?.total_views || 0) : '—'}</td><td>{formatDate(post.updated_at)}</td><td><button className="text-link" onClick={() => { setMessage(''); setEditing(post) }}><Pencil size={15} /> Edit<span className="sr-only"> {post.title}</span></button></td></tr>)}</tbody></table></div> : <div className="dashboard-empty"><h3>{filter === 'all' ? 'Your first post starts here' : `No ${filter} posts`}</h3><p>{filter === 'all' ? 'Write a story, save it as a draft, and publish when it’s ready.' : 'Posts with this status will appear here.'}</p></div>}
+    {loading ? <p role="status">Loading posts…</p> : visible.length ? <div className="table-wrap"><table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Reads</th><th>Updated</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{visible.map(post => <tr key={post.id}><td>{post.title}</td><td>{post.category}</td><td><span className={`post-status ${post.status}`}>{post.status}</span></td><td>{stats ? Number(stats.find(item => item.post_id === post.id)?.total_views || 0) : '—'}</td><td>{formatDate(post.updated_at)}</td><td><div className="table-actions"><button className="text-link" onClick={() => { setMessage(''); setEditing(post) }}><Pencil size={15} /> Edit<span className="sr-only"> {post.title}</span></button>{post.status === 'published' && <a className="text-link" href={`/?article=${encodeURIComponent(post.slug)}`} target="_blank" rel="noreferrer"><ExternalLink size={15} /> View</a>}</div></td></tr>)}</tbody></table></div> : <div className="dashboard-empty"><h3>{filter === 'all' ? 'Your first post starts here' : `No ${filter} posts`}</h3><p>{filter === 'all' ? 'Write a story, save it as a draft, and publish when it’s ready.' : 'Posts with this status will appear here.'}</p></div>}
   </section>
 }
 function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; onSaved: () => void }) {
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
   const [form, setForm] = useState<PostInput>(post ? { title: post.title, slug: post.slug, excerpt: post.excerpt, body: post.body, category: post.category, status: post.status, cover_url: post.cover_url, youtube_url: post.youtube_url, score: post.score, featured: post.featured, published_at: post.published_at } : blank)
   const [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [preview, setPreview] = useState(false), [error, setError] = useState('')
   function change<K extends keyof PostInput>(key: K, value: PostInput[K]) { setDirty(true); setForm(current => ({ ...current, [key]: value })) }
+  function insertFormat(prefix: string, suffix = '') {
+    const el = bodyRef.current
+    if (!el) return
+    const start = el.selectionStart, end = el.selectionEnd
+    const selected = el.value.slice(start, end)
+    const inserted = `${prefix}${selected || 'text'}${suffix}`
+    const next = el.value.slice(0, start) + inserted + el.value.slice(end)
+    change('body', next)
+    setTimeout(() => {
+      el.focus()
+      const pos = start + prefix.length + (selected ? selected.length : 4)
+      el.setSelectionRange(pos, pos)
+    }, 0)
+  }
   useEffect(() => {
     function warn(event: BeforeUnloadEvent) { if (dirty) { event.preventDefault(); event.returnValue = '' } }
     window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn)
@@ -89,7 +104,19 @@ function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; 
       <label>Title<input required maxLength={200} value={form.title} onChange={e => { const title = e.target.value; setDirty(true); setForm(current => ({ ...current, title, slug: !post && (!current.slug || current.slug === slugify(current.title)) ? slugify(title) : current.slug })) }} /></label>
       <label>Article URL<input required maxLength={200} value={form.slug} onChange={e => change('slug', e.target.value)} /><small>astrobitplays.me/?article={form.slug || 'your-article-title'}</small></label>
       <label>Summary<textarea rows={3} maxLength={400} value={form.excerpt} onChange={e => change('excerpt', e.target.value)} /></label>
-      <label>Article<textarea className="body-editor" required maxLength={200000} value={form.body} onChange={e => change('body', e.target.value)} /><small>Markdown supported: ## headings, **bold**, *italic*, links and lists. Use Preview to check formatting.</small></label>
+      <label>Article
+        <div className="editor-toolbar" role="toolbar" aria-label="Markdown formatting">
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('**', '**')} title="Bold"><b>B</b></button>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('*', '*')} title="Italic"><i>I</i></button>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('## ', '')} title="Heading 2">H2</button>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('### ', '')} title="Heading 3">H3</button>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('> ', '')} title="Quote">Quote</button>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('- ', '')} title="Bullet list">List</button>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('[', '](https://)')} title="Link">Link</button>
+        </div>
+        <textarea ref={bodyRef} className="body-editor" required maxLength={200000} value={form.body} onChange={e => change('body', e.target.value)} />
+        <small>Markdown supported: ## headings, **bold**, *italic*, links and lists. Use Preview to check formatting.</small>
+      </label>
     </div><aside className="publishing-options">
       <label>Category<select value={form.category} onChange={e => change('category', e.target.value as PostInput['category'])}>{categories.map(category => <option key={category}>{category}</option>)}</select></label>
       <label>Status<select value={form.status} onChange={e => change('status', e.target.value as PostInput['status'])}><option value="draft">Draft</option><option value="published">Published</option></select></label>

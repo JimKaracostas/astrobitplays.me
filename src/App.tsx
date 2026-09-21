@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { Search, Bookmark, LogOut, ArrowLeft, Menu, X } from 'lucide-react'
+import { Search, Bookmark, LogOut, ArrowLeft, Menu, X, Share2, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { database, supabase, trackView } from './lib/supabase'
-import { categories, formatDate, placeholder, safeImage, youtubeId } from './lib/content'
+import { categories, formatDate, placeholder, safeImage, youtubeId, readingTime } from './lib/content'
 import type { Post } from './lib/content'
 const LazyStudio = lazy(() => import('./Studio').then(module => ({ default: module.Studio })))
 function Studio() { return <Suspense fallback={<p role="status">Loading dashboard…</p>}><LazyStudio /></Suspense> }
@@ -24,6 +24,7 @@ export function App() {
   const [posts, setPosts] = useState<Post[]>([]), [saved, setSaved] = useState<string[]>([])
   const [loading, setLoading] = useState(!!supabase), [error, setError] = useState(''), [accountError, setAccountError] = useState('')
   const [signIn, setSignIn] = useState(page === 'signin'), [menu, setMenu] = useState(false), [saving, setSaving] = useState(false), [limit, setLimit] = useState(12)
+  const [copied, setCopied] = useState(false)
   useEffect(() => {
     if (!supabase) return
     let active = true
@@ -89,6 +90,13 @@ export function App() {
     if (logoutError) setAccountError('Couldn’t sign out. Please try again.')
     else { setOwner(false); setSaved([]); window.location.assign('/') }
   }
+  function shareArticle() {
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(window.location.href)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
   const filtered = posts.filter(item => (!section || item.category === section) && (!query || `${item.title} ${item.excerpt} ${item.body}`.toLowerCase().includes(query.toLowerCase())) && (page !== 'saved' || saved.includes(item.id)))
   const lead = posts.find(item => item.featured) || posts[0]
   const listing = !!section || params.has('q') || page === 'saved'
@@ -105,13 +113,13 @@ export function App() {
     <main id="main" className={`site-main ${page === 'studio' ? 'studio-main' : ''}`}>
       {accountError && <p className="notice error" role="alert">{accountError}</p>}
       {page === 'studio' ? !authReady || !roleReady ? <p className="empty-text" role="status">Checking your account…</p> : !user ? <div className="access-state"><h1>Sign in to continue</h1><p>The dashboard is available to the site owner.</p><button className="button" onClick={() => setSignIn(true)}>Sign in</button></div> : owner ? <Studio /> : <div className="access-state"><h1>Owner access required</h1><p>You’re signed in as {user.email}. Only the owner can open the dashboard.</p><p className="account-id">Account ID: {user.id}</p><a href="/">Back to articles</a></div>
-      : slug ? loading ? <p role="status">Loading article…</p> : error ? <p role="alert" className="notice error">{error}</p> : post ? <article className="article-page">
+      : slug ? loading ? <p role="status">Loading article…</p> : error ? <p role="alert" className="notice error">{error}</p> : post ? <><article className="article-page">
         <a className="back-link" href={`/?section=${post.category}`}><ArrowLeft size={16} /> {post.category}</a><h1>{post.title}</h1><p className="article-deck">{post.excerpt}</p>
-        <div className="article-byline"><span>By AstroBitPlays · {formatDate(post.published_at)}</span><button className="save-button" onClick={() => bookmark(post.id)} disabled={saving} aria-pressed={saved.includes(post.id)}><Bookmark size={17} fill={saved.includes(post.id) ? 'currentColor' : 'none'} />{saved.includes(post.id) ? 'Saved' : 'Save article'}</button></div>
+        <div className="article-byline"><span>By AstroBitPlays · {formatDate(post.published_at)} · {readingTime(post.body)}</span><div className="article-actions"><button className="save-button" onClick={shareArticle} aria-label="Share article">{copied ? <Check size={17} /> : <Share2 size={17} />}{copied ? 'Copied!' : 'Share'}</button><button className="save-button" onClick={() => bookmark(post.id)} disabled={saving} aria-pressed={saved.includes(post.id)}><Bookmark size={17} fill={saved.includes(post.id) ? 'currentColor' : 'none'} />{saved.includes(post.id) ? 'Saved' : 'Save article'}</button></div></div>
         <Cover post={post} /><div className="article-body"><ReactMarkdown>{post.body}</ReactMarkdown></div>
         {youtubeId(post.youtube_url) && <iframe className="video" src={`https://www.youtube-nocookie.com/embed/${youtubeId(post.youtube_url)}`} title={`${post.title} video`} allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" />}
         {post.category === 'Reviews' && post.score !== null && <div className="review-verdict"><strong>Our score</strong><span>{post.score}<small> / 10</small></span></div>}
-      </article> : <div className="access-state"><h1>Article not found</h1><p>This story may have been unpublished or moved.</p><a href="/">Back to the homepage</a></div>
+      </article>{posts.filter(item => item.id !== post.id && item.category === post.category).length > 0 && <section className="more-stories"><SectionTitle>More in {post.category}</SectionTitle><div className="post-grid">{posts.filter(item => item.id !== post.id && item.category === post.category).slice(0, 3).map(item => <PostCard key={item.id} post={item} />)}</div></section>}</> : <div className="access-state"><h1>Article not found</h1><p>This story may have been unpublished or moved.</p><a href="/">Back to the homepage</a></div>
       : listing ? <section><div className="listing-heading"><h1>{page === 'saved' ? 'Saved articles' : params.has('q') ? query ? `Search: ${query}` : 'Search articles' : section}</h1><a href="/">All stories</a></div>
         {page === 'saved' && !user ? <div className="access-state"><p>Sign in to save stories and read them later.</p><button className="button" onClick={() => setSignIn(true)}>Sign in</button></div> : loading ? <p role="status">Loading articles…</p> : error ? <p className="notice error" role="alert">{error}</p> : filtered.length ? <><div className="post-grid">{filtered.slice(0, limit).map(item => <PostCard key={item.id} post={item} />)}</div>{filtered.length > limit && <button className="button secondary load-more" onClick={() => setLimit(limit + 12)}>Load more articles</button>}</> : <p className="empty-text">{query ? 'No articles match your search.' : page === 'saved' ? 'You haven’t saved any articles yet.' : `No ${section.toLowerCase() || 'articles'} published yet.`}</p>}</section>
       : <><div className="front-grid"><section className="lead-story">{loading ? <><Cover /><h1>Latest stories</h1><p className="empty-text" role="status">Loading articles…</p></> : lead ? <><a href={`/?article=${encodeURIComponent(lead.slug)}`}><Cover post={lead} /><div className="post-meta">{lead.category}</div><h1>{lead.title}</h1></a><p className="lead-deck">{lead.excerpt}</p><div className="byline">By AstroBitPlays · {formatDate(lead.published_at)}</div></> : <><Cover /><h1>{error ? 'Latest stories' : 'No stories published yet'}</h1><p className="lead-deck" role={error ? 'alert' : undefined}>{error || 'News, reviews and guides will appear here.'}</p>{error && <button className="text-link" onClick={() => window.location.reload()}>Try again</button>}</>}</section>
@@ -120,7 +128,7 @@ export function App() {
         {posts.filter(item => item.id !== lead?.id && item.category !== 'Reviews').length > 0 && <section className="more-stories"><SectionTitle>More stories</SectionTitle><div className="post-grid">{posts.filter(item => item.id !== lead?.id && item.category !== 'Reviews').slice(0, 6).map(item => <PostCard key={item.id} post={item} />)}</div></section>}
       </>}
     </main>
-    <footer className="site-footer"><div><a className="footer-brand" href="/">ASTROBIT<b>PLAYS</b></a><nav aria-label="Social links"><a href="https://youtube.com/@astrobitplayss" target="_blank" rel="noreferrer">YouTube</a><a href="https://twitch.tv/astrobitplays" target="_blank" rel="noreferrer">Twitch</a><a href="https://instagram.com/astrobitplays" target="_blank" rel="noreferrer">Instagram</a></nav></div></footer>
+    <footer className="site-footer"><div><a className="footer-brand" href="/">ASTROBIT<b>PLAYS</b></a><nav aria-label="Social links"><a href="https://youtube.com/@astrobitplayss" target="_blank" rel="noreferrer">YouTube</a><a href="https://twitch.tv/astrobitplays" target="_blank" rel="noreferrer">Twitch</a><a href="https://x.com/astrobitplays" target="_blank" rel="noreferrer">X</a><a href="https://instagram.com/astrobitplays" target="_blank" rel="noreferrer">Instagram</a><a href="https://tiktok.com/@astrobitplays" target="_blank" rel="noreferrer">TikTok</a></nav></div></footer>
     {signIn && <SignIn onClose={() => setSignIn(false)} />}
   </>
 }
