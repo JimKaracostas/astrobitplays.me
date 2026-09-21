@@ -1,4 +1,4 @@
--- Run this in your Supabase project's SQL Editor to publish the Marvel's Wolverine review with a low rating (4.5/10) and rich embeds.
+-- Run this in your Supabase project's SQL Editor to publish or update the Marvel's Wolverine review with a 6.0/10 rating and rich embeds.
 -- It is idempotent: running it again updates the post if it already exists.
 
 insert into public.posts (
@@ -15,55 +15,57 @@ insert into public.posts (
   published_at
 )
 values (
-  'Marvel’s Wolverine Review: A Blunt, Repetitive Disappointment',
+  'Marvel’s Wolverine Review: Visceral Thrills Trapped in Dated Design',
   'marvels-wolverine-review',
-  'Despite visceral gore and stellar voice work, Insomniac’s Wolverine falters under the weight of mind-numbing button mashing, dated corridor design, and tedious boss sponges.',
-  'When Insomniac Games first teased *Marvel’s Wolverine*, expectations were through the roof. After redefining web-slinging across three sensational Spider-Man titles, the studio seemed uniquely poised to deliver the definitive, uncompromising Weapon X simulator. Unfortunately, after spending 18 agonizing hours hacking through wave after wave of cloned cyber-mercenaries in dimly lit corridors, the verdict is impossible to ignore: Logan’s solo outing is a dull, repetitive slog that feels ripped straight from the mid-2000s.
+  'Insomniac nails the ferocious, R-rated brutality of Logan, but repetitive combat loops and rigid corridor design keep this solo outing from reaching true greatness.',
+  'When Insomniac Games first announced *Marvel’s Wolverine*, expectations were sky-high. Having set the modern benchmark for superhero sandboxes across three phenomenal Spider-Man adventures, the studio seemed ideally suited to craft the definitive, uncompromising Logan experience. And in several key areas—namely unrestrained gore, visceral audio, and a grippingly dark narrative—they genuinely deliver. 
 
-## The Illusion of Ferocity: Mind-Numbing Combat
+Yet after spending 16 hours slicing through waves of cybernetic mercenaries and Reavers across Madripoor and the Canadian wilderness, the final impression is deeply conflicted: *Marvel’s Wolverine* has the teeth of an apex predator, but the bones of a mid-2000s corridor action game.
 
-At first glance, the combat delivers an intoxicating punch. Claws sever limbs with sickening crunches, flesh tears dynamically, and Logan lunges across the room like a rabid animal. But the honeymoon lasts roughly two hours.
+## The Claws Come Out: Satisfying Gore, Shallow Depth
 
-Once the novelty of adamantium decapitations wears thin, you realize the combat is startlingly shallow:
+Let’s be clear: when Logan first unsheathes his adamantium claws, the game feels exhilarating. Bones splinter with sickening crunches, dynamic dismemberment coats the screen in crimson, and Wolverine’s savage pounce animations feel raw and dangerous. For the first three or four hours, the sheer sensory impact of the violence carries the experience.
 
-- **Two-Button Claw Mashing:** Combat rarely demands anything beyond furious light-and-heavy spam. Special Techniques like the Tornado Spin look flashy on trailer reels, but they deal negligible damage compared to simply mashing heavy strikes.
-- **Aggravating Parrying Windows:** The timing for deflecting melee strikes feels wildly inconsistent, especially in multi-enemy encounters where camera angles regularly obscure incoming red power-attacks.
-- **The Baffling "Stealth" Sequences:** For reasons passing all human understanding, Insomniac repeatedly forces Wolverine—a mutant whose entire identity is savage berserker momentum—to crouch through waist-high foliage, silently takedown guards with clunky canned animations.
+However, once the initial shock value subsides, the combat reveals its narrow boundaries:
+
+- **Repetitive Attack Patterns:** Despite an extensive skill tree, encounters consistently boil down to furious light-and-heavy claw mashing. Special rage abilities like the Berserker Flurry look spectacular, but standard strikes get the job done just as fast.
+- **Finicky Defensive Timing:** Parrying incoming strikes feels slightly detached, with enemy indicator flares occasionally masked by chaotic camera angles in crowded brawls.
+- **Forced Stealth Stretches:** Logan is at his best when charging headfirst into danger, which makes the recurring sequences where you are forced to crouch through waist-high grass to perform slow stealth takedowns feel oddly out of place.
 
 https://www.youtube.com/watch?v=G62QQ42Ewwg
 
-## Hallway Simulator: Dated Level Design
+## A World on Rails: Confining Level Design
 
-Madripoor should have been a dirty, kinetic marvel. Instead, players are funneled through rigid concrete hallways, endless sewer tunnels, and barricaded warehouse corridors. 
+The neon-soaked alleys of Madripoor and the snow-blanketed forests of Alberta look breathtaking on PlayStation 5, but you rarely get to truly inhabit them. Rather than offering the expansive navigational freedom Insomniac perfected with web-swinging, *Wolverine* is strictly an on-rails corridor crawler.
 
-Invisible walls restrict your movement at every turn. You cannot leap across rooftops, you cannot climb past ankle-high debris, and whenever the game wants to deliver dialogue, Logan is forcibly reduced to an agonizing crawl. The so-called "Nightmare Doors" (optional combat challenge rifts) do little to alleviate the claustrophobia, offering nothing more than repurposed wave-survival arenas that reward cosmetic suit scraps.
+Invisible walls hem you in constantly. You cannot vault over knee-high rubble, optional detours are rare, and traversal frequently grinds to a halt for slow-walk dialogue sections. The occasional "Hunting Sense" tracking sequences—where you follow glowing scent trails across linear paths—do little to make you feel like a master tracker.
 
 https://x.com/astrobitplays/status/1837502918291829182
 
-## Bosses That Test Your Patience, Not Your Skill
+## Memorable Clashes and Bullet-Sponge Foes
 
-Nothing highlights the game’s design shortcomings more painfully than its boss encounters. Fights against **Sabretooth**, **Omega Red**, and **Lady Deathstrike** should have been cinematic masterclasses. Instead, they are multi-phase endurance trials where bosses possess absurdly bloated health bars and uninterrupted hyper-armor. 
+The narrative set pieces and boss duels offer several high points. Clashing claws with **Sabretooth** in a collapsing logging facility and going toe-to-toe with **Lady Deathstrike** provide genuine cinematic adrenaline. Liam McIntyre delivers an exceptional performance as Logan, balancing quiet melancholy with feral rage.
 
-You spend eighty percent of each boss duel dodging telegraphed ground-pound shockwaves while waiting for a brief window to chip away a sliver of health, only to be thrown into an unskippable Quick-Time Event (QTE) sequence.
+However, too many boss battles outstay their welcome through bloated health pools and sudden hyper-armor phases that disregard your momentum, often culminating in repetitive quick-time event sequences rather than player-driven triumphs.
 
-## The Verdict
+## The Verdict: 6 / 10
 
-*Marvel’s Wolverine* has the raw visual fidelity and gore of a high-budget PlayStation 5 showcase, but the mechanical soul of an outdated brawler. It mistakes repetition for intensity and padding for substance. If you are an absolute die-hard Logan devotee, there are a few brief thrills to be mined here—but everyone else should wait for a deep discount.
+*Marvel’s Wolverine* is a competent, visually stunning brawler that treats its titular mutant with immense thematic respect and unapologetic violence. Yet its restrictive corridors, repetitive encounters, and dated mission pacing prevent it from ascending into the pantheon of great superhero titles. Die-hard Wolverine fans will appreciate the bloody spectacle, but under the adamantium surface lies a conventional action title.
 
 ### Pros
-- Visceral gore and crunching sound design
-- Convincing, gritty voice acting for Logan
+- Outstanding, uncompromising R-rated gore and audio design
+- Stellar voice acting and a gritty, respectful character study of Logan
+- Thrilling, cinematic boss set-pieces
 
 ### Cons
-- Shallow, repetitive melee combat that grows tedious quickly
-- Dated, corridor-locked level design with constant invisible walls
-- Tedious bullet-sponge bosses with frustrating hyper-armor
-- Unwanted, pace-killing stealth sequences',
+- Combat lacks mechanical depth over a 15+ hour campaign
+- Highly linear corridor layouts with intrusive invisible walls
+- Pacing dragged down by forced stealth segments and spongy boss phases',
   'Reviews',
   'published',
   '',
   'https://www.youtube.com/watch?v=G62QQ42Ewwg',
-  4.5,
+  6.0,
   true,
   now()
 )
