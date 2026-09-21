@@ -1,10 +1,42 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { ArrowLeft, Plus, Eye, Pencil, Upload, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Plus, Eye, Pencil, Upload, ExternalLink, Star } from 'lucide-react'
 import { database } from './lib/supabase'
 import { categories, formatDate, placeholder, safeImage, slugify, validatePost, youtubeId } from './lib/content'
 import type { Post, PostInput } from './lib/content'
+
+function StarPicker({ value, onChange }: { value: number | null; onChange: (score: number) => void }) {
+  const [hover, setHover] = useState<number | null>(null)
+  const current = hover ?? value ?? 0
+  return (
+    <div className="stars-row" role="radiogroup" aria-label="Review score out of 10">
+      {Array.from({ length: 10 }, (_, i) => {
+        const starVal = i + 1
+        const active = starVal <= Math.round(current)
+        return (
+          <button
+            key={starVal}
+            type="button"
+            className="star-pick-btn"
+            onMouseEnter={() => setHover(starVal)}
+            onMouseLeave={() => setHover(null)}
+            onClick={() => onChange(starVal)}
+            title={`${starVal} / 10`}
+            aria-label={`${starVal} out of 10`}
+          >
+            <Star
+              size={20}
+              fill={active ? '#f59e0b' : 'none'}
+              color={active ? '#f59e0b' : '#94a3b8'}
+              strokeWidth={1.75}
+            />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 type Stat = { post_id: string; total_views: number; recent_views: number }
 const blank: PostInput = { title: '', slug: '', excerpt: '', body: '', category: 'News', status: 'draft', cover_url: '', youtube_url: '', score: null, featured: false, published_at: null }
@@ -118,11 +150,15 @@ function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; 
         <small>Markdown supported: ## headings, **bold**, *italic*, links and lists. Use Preview to check formatting.</small>
       </label>
     </div><aside className="publishing-options">
-      <label>Category<select value={form.category} onChange={e => change('category', e.target.value as PostInput['category'])}>{categories.map(category => <option key={category}>{category}</option>)}</select></label>
+      <label>Category<select value={form.category} onChange={e => {
+        const next = e.target.value as PostInput['category']
+        change('category', next)
+        if (next === 'Reviews' && form.score === null) change('score', 9.0)
+      }}>{categories.map(category => <option key={category}>{category}</option>)}</select></label>
       <label>Status<select value={form.status} onChange={e => change('status', e.target.value as PostInput['status'])}><option value="draft">Draft</option><option value="published">Published</option></select></label>
       <label className="checkbox-label"><input type="checkbox" checked={form.featured} onChange={e => change('featured', e.target.checked)} /> Feature on homepage</label>
       <div className="cover-options"><span className="field-label">Cover image</span><img className="cover" src={form.cover_url ? safeImage(form.cover_url) : placeholder} alt="Cover preview" /><label className="upload-label"><Upload size={16} /> {uploading ? 'Uploading…' : 'Upload image'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading || busy} onChange={e => { void upload(e.target.files?.[0]); e.target.value = '' }} /></label><small>JPG, PNG or WebP · up to 5 MB</small><label>Or use an image URL<input type="url" placeholder="https://…" value={form.cover_url} onChange={e => change('cover_url', e.target.value)} /></label>{form.cover_url && <button type="button" className="text-link" onClick={() => change('cover_url', '')}>Use galaxy placeholder</button>}</div>
-      {form.category === 'Reviews' && <label>Review score / 10<input type="number" min="0" max="10" step="0.1" value={form.score ?? ''} onChange={e => change('score', e.target.value === '' ? null : Number(e.target.value))} /><small>Optional</small></label>}
+      {form.category === 'Reviews' && <div className="score-picker-container"><label>Review score: <strong>{form.score !== null ? `${form.score} / 10` : 'Not set'}</strong><StarPicker value={form.score} onChange={s => change('score', s)} /><input type="number" min="0" max="10" step="0.1" value={form.score ?? ''} onChange={e => change('score', e.target.value === '' ? null : Number(e.target.value))} placeholder="e.g. 9.2" /><small>Click stars (1–10) or type an exact decimal.</small></label></div>}
       <label>YouTube URL<input type="url" value={form.youtube_url} onChange={e => change('youtube_url', e.target.value)} placeholder="https://youtube.com/watch?v=…" /></label>
       <button className="button" disabled={busy || uploading}>{busy ? 'Saving…' : form.status === 'published' ? post?.status === 'published' ? 'Save changes' : 'Publish post' : post?.status === 'published' ? 'Unpublish and save draft' : 'Save draft'}</button>
       <small>{form.status === 'published' ? 'Saving makes this post visible to everyone.' : 'Only you can see drafts.'}</small>

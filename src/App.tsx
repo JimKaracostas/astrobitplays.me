@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { Search, Bookmark, LogOut, ArrowLeft, Menu, X, Share2, Check } from 'lucide-react'
+import { Search, Bookmark, LogOut, ArrowLeft, Menu, X, Share2, Check, Star } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { database, supabase, trackView } from './lib/supabase'
 import { categories, formatDate, placeholder, safeImage, youtubeId, readingTime } from './lib/content'
@@ -9,13 +9,44 @@ import type { Post } from './lib/content'
 const LazyStudio = lazy(() => import('./Studio').then(module => ({ default: module.Studio })))
 function Studio() { return <Suspense fallback={<p role="status">Loading dashboard…</p>}><LazyStudio /></Suspense> }
 
+export function StarRating({ score, max = 10, size = 15 }: { score: number; max?: number; size?: number }) {
+  const rounded = Math.round(score)
+  return (
+    <div className="star-rating" aria-label={`${score} out of ${max} stars`}>
+      {Array.from({ length: max }, (_, i) => {
+        const filled = i < rounded
+        return (
+          <Star
+            key={i}
+            size={size}
+            className={filled ? 'star-filled' : 'star-empty'}
+            fill={filled ? '#f59e0b' : 'none'}
+            color={filled ? '#f59e0b' : '#94a3b8'}
+            strokeWidth={1.75}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 function Cover({ post }: { post?: Post }) {
   return <img className="cover" src={post?.cover_url ? safeImage(post.cover_url) : placeholder} alt={post ? post.title : 'Blue stars and galaxy clouds'} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = placeholder }} />
 }
 function SectionTitle({ children }: { children: ReactNode }) { return <h2 className="section-title">{children}</h2> }
 function PostCard({ post }: { post: Post }) {
-  return <article className="post-card"><a href={`/?article=${encodeURIComponent(post.slug)}`}><Cover post={post} /><div className="post-meta">{post.category} <span>{formatDate(post.published_at)}</span></div><h3>{post.title}</h3></a><p>{post.excerpt}</p>{post.category === 'Reviews' && post.score !== null && <span className="score">{post.score}<small> / 10</small></span>}</article>
+  return <article className="post-card">
+    <a href={`/?article=${encodeURIComponent(post.slug)}`}><Cover post={post} /><div className="post-meta">{post.category} <span>{formatDate(post.published_at)}</span></div><h3>{post.title}</h3></a>
+    <p>{post.excerpt}</p>
+    {post.category === 'Reviews' && post.score !== null && (
+      <div className="card-score-row">
+        <StarRating score={post.score} size={13} />
+        <span className="score">{post.score}<small> / 10</small></span>
+      </div>
+    )}
+  </article>
 }
+
 export function App() {
   const params = new URLSearchParams(window.location.search)
   const section = params.get('section') || '', query = params.get('q') || '', page = params.get('page') || '', slug = params.get('article') || ''
@@ -118,7 +149,7 @@ export function App() {
         <div className="article-byline"><span>By AstroBitPlays · {formatDate(post.published_at)} · {readingTime(post.body)}</span><div className="article-actions"><button className="save-button" onClick={shareArticle} aria-label="Share article">{copied ? <Check size={17} /> : <Share2 size={17} />}{copied ? 'Copied!' : 'Share'}</button><button className="save-button" onClick={() => bookmark(post.id)} disabled={saving} aria-pressed={saved.includes(post.id)}><Bookmark size={17} fill={saved.includes(post.id) ? 'currentColor' : 'none'} />{saved.includes(post.id) ? 'Saved' : 'Save article'}</button></div></div>
         <Cover post={post} /><div className="article-body"><ReactMarkdown>{post.body}</ReactMarkdown></div>
         {youtubeId(post.youtube_url) && <iframe className="video" src={`https://www.youtube-nocookie.com/embed/${youtubeId(post.youtube_url)}`} title={`${post.title} video`} allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" />}
-        {post.category === 'Reviews' && post.score !== null && <div className="review-verdict"><strong>Our score</strong><span>{post.score}<small> / 10</small></span></div>}
+        {post.category === 'Reviews' && post.score !== null && <div className="review-verdict"><div className="verdict-label"><strong>Our score</strong><StarRating score={post.score} size={18} /></div><span>{post.score}<small> / 10</small></span></div>}
       </article>{posts.filter(item => item.id !== post.id && item.category === post.category).length > 0 && <section className="more-stories"><SectionTitle>More in {post.category}</SectionTitle><div className="post-grid">{posts.filter(item => item.id !== post.id && item.category === post.category).slice(0, 3).map(item => <PostCard key={item.id} post={item} />)}</div></section>}</> : <div className="access-state"><h1>Article not found</h1><p>This story may have been unpublished or moved.</p><a href="/">Back to the homepage</a></div>
       : listing ? <section><div className="listing-heading"><h1>{page === 'saved' ? 'Saved articles' : params.has('q') ? query ? `Search: ${query}` : 'Search articles' : section}</h1><a href="/">All stories</a></div>
         {page === 'saved' && !user ? <div className="access-state"><p>Sign in to save stories and read them later.</p><button className="button" onClick={() => setSignIn(true)}>Sign in</button></div> : loading ? <p role="status">Loading articles…</p> : error ? <p className="notice error" role="alert">{error}</p> : filtered.length ? <><div className="post-grid">{filtered.slice(0, limit).map(item => <PostCard key={item.id} post={item} />)}</div>{filtered.length > limit && <button className="button secondary load-more" onClick={() => setLimit(limit + 12)}>Load more articles</button>}</> : <p className="empty-text">{query ? 'No articles match your search.' : page === 'saved' ? 'You haven’t saved any articles yet.' : `No ${section.toLowerCase() || 'articles'} published yet.`}</p>}</section>
