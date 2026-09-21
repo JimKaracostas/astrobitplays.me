@@ -150,11 +150,8 @@ function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; 
         <small>Markdown supported: ## headings, **bold**, *italic*, links and lists. Use Preview to check formatting.</small>
       </label>
     </div><aside className="publishing-options">
-      <label>Category<select value={form.category} onChange={e => {
-        const next = e.target.value as PostInput['category']
-        change('category', next)
-        if (next === 'Reviews' && form.score === null) change('score', 9.0)
-      }}>{categories.map(category => <option key={category}>{category}</option>)}</select></label>
+      <label>Category<select value={form.category} onChange={e => change('category', e.target.value as PostInput['category'])}>{categories.map(category => <option key={category}>{category}</option>)}</select></label>
+
       <label>Status<select value={form.status} onChange={e => change('status', e.target.value as PostInput['status'])}><option value="draft">Draft</option><option value="published">Published</option></select></label>
       <label className="checkbox-label"><input type="checkbox" checked={form.featured} onChange={e => change('featured', e.target.checked)} /> Feature on homepage</label>
       <div className="cover-options"><span className="field-label">Cover image</span><img className="cover" src={form.cover_url ? safeImage(form.cover_url) : placeholder} alt="Cover preview" /><label className="upload-label"><Upload size={16} /> {uploading ? 'Uploading…' : 'Upload image'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading || busy} onChange={e => { void upload(e.target.files?.[0]); e.target.value = '' }} /></label><small>JPG, PNG or WebP · up to 5 MB</small><label>Or use an image URL<input type="url" placeholder="https://…" value={form.cover_url} onChange={e => change('cover_url', e.target.value)} /></label>{form.cover_url && <button type="button" className="text-link" onClick={() => change('cover_url', '')}>Use galaxy placeholder</button>}</div>
