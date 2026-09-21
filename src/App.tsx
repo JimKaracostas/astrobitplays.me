@@ -53,9 +53,11 @@ export function App() {
   const [user, setUser] = useState<User | null>(null)
   const [owner, setOwner] = useState(false), [authReady, setAuthReady] = useState(!supabase), [roleReady, setRoleReady] = useState(false)
   const [posts, setPosts] = useState<Post[]>([]), [saved, setSaved] = useState<string[]>([])
-  const [loading, setLoading] = useState(!!supabase), [error, setError] = useState(''), [accountError, setAccountError] = useState('')
-  const [signIn, setSignIn] = useState(page === 'signin'), [menu, setMenu] = useState(false), [saving, setSaving] = useState(false), [limit, setLimit] = useState(12)
+  const urlError = params.get('error_description') || (typeof window !== 'undefined' && window.location.hash.includes('error_description') ? new URLSearchParams(window.location.hash.replace(/^#/, '')).get('error_description') : null)
+  const [loading, setLoading] = useState(!!supabase), [error, setError] = useState(''), [accountError, setAccountError] = useState(urlError || '')
+  const [signIn, setSignIn] = useState(page === 'signin' || !!urlError), [menu, setMenu] = useState(false), [saving, setSaving] = useState(false), [limit, setLimit] = useState(12)
   const [copied, setCopied] = useState(false)
+
   useEffect(() => {
     if (!supabase) return
     let active = true
@@ -182,7 +184,8 @@ function SignIn({ onClose }: { onClose: () => void }) {
     try {
       const { error: authError } = await database().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/?page=saved` } })
       if (authError) throw authError
-    } catch { setError('Google sign-in couldn’t start. Please try again.'); setBusy(false) }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Google sign-in couldn’t start. Please try again.'); setBusy(false) }
+
   }
   return <dialog className="auth-dialog" ref={dialog} onCancel={onClose} aria-labelledby="auth-title"><button className="dialog-close icon-button" onClick={onClose} aria-label="Close sign in"><X size={20} /></button><h2 id="auth-title">{mode === 'signup' ? 'Create an account' : 'Sign in'}</h2><p>Save stories to read later.</p><button className="button secondary google-signin" disabled={busy} onClick={googleSignIn}>Continue with Google</button><p className="auth-divider">or use your email</p><form onSubmit={submit}><label>Email address<input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" /></label><button className="button" disabled={busy}>{busy ? 'Please wait…' : 'Email me a link'}</button></form>{message && <p className="notice" role="status">{message}</p>}{error && <p className="notice error" role="alert">{error}</p>}<button className="text-link" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage(''); setError('') }}>{mode === 'signin' ? 'New here? Create an account' : 'Already registered? Sign in'}</button></dialog>
 
