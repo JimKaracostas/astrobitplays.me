@@ -162,21 +162,33 @@ export function App() {
         {posts.filter(item => item.id !== lead?.id && item.category !== 'Reviews').length > 0 && <section className="more-stories"><SectionTitle>More stories</SectionTitle><div className="post-grid">{posts.filter(item => item.id !== lead?.id && item.category !== 'Reviews').slice(0, 6).map(item => <PostCard key={item.id} post={item} />)}</div></section>}
       </>}
     </main>
-    <footer className="site-footer"><div><a className="footer-brand" href="/">ASTROBIT<b>PLAYS</b></a><nav aria-label="Social links"><a href="https://youtube.com/@astrobitplayss" target="_blank" rel="noreferrer">YouTube</a><a href="https://twitch.tv/astrobitplays" target="_blank" rel="noreferrer">Twitch</a><a href="https://x.com/astrobitplays" target="_blank" rel="noreferrer">X</a><a href="https://instagram.com/astrobitplays" target="_blank" rel="noreferrer">Instagram</a><a href="https://tiktok.com/@astrobitplays" target="_blank" rel="noreferrer">TikTok</a></nav></div></footer>
     {signIn && <SignIn onClose={() => setSignIn(false)} />}
   </>
 }
 function SignIn({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin'), [email, setEmail] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('')
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin'), [email, setEmail] = useState(''), [password, setPassword] = useState(''), [useOtp, setUseOtp] = useState(false)
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('')
   useEffect(() => { dialog.current?.showModal(); const element = dialog.current; return () => { element?.close() } }, [])
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(''); setMessage('')
     try {
-      const { error: authError } = await database().auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: mode === 'signup', emailRedirectTo: `${window.location.origin}/?page=saved` } })
-      if (authError) throw authError
-      setMessage('Check your inbox for a sign-in link. You can close this window.')
-    } catch (err) { setError(err instanceof Error ? err.message : 'We couldn’t send the link. Please try again.') }
+      if (useOtp) {
+        const { error: authError } = await database().auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: mode === 'signup', emailRedirectTo: `${window.location.origin}/?page=saved` } })
+        if (authError) throw authError
+        setMessage('Check your inbox for a sign-in link. You can close this window.')
+      } else {
+        if (mode === 'signup') {
+          const { data, error: authError } = await database().auth.signUp({ email: email.trim(), password })
+          if (authError) throw authError
+          if (data.session) { onClose() } else { setMessage('Account created! You can now sign in.') }
+        } else {
+          const { error: authError } = await database().auth.signInWithPassword({ email: email.trim(), password })
+          if (authError) throw authError
+          onClose()
+        }
+      }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Authentication failed. Please check your details.') }
     finally { setBusy(false) }
   }
   async function googleSignIn() {
@@ -185,9 +197,8 @@ function SignIn({ onClose }: { onClose: () => void }) {
       const { error: authError } = await database().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/?page=saved` } })
       if (authError) throw authError
     } catch (err) { setError(err instanceof Error ? err.message : 'Google sign-in couldn’t start. Please try again.'); setBusy(false) }
-
   }
-  return <dialog className="auth-dialog" ref={dialog} onCancel={onClose} aria-labelledby="auth-title"><button className="dialog-close icon-button" onClick={onClose} aria-label="Close sign in"><X size={20} /></button><h2 id="auth-title">{mode === 'signup' ? 'Create an account' : 'Sign in'}</h2><p>Save stories to read later.</p><button className="button secondary google-signin" disabled={busy} onClick={googleSignIn}>Continue with Google</button><p className="auth-divider">or use your email</p><form onSubmit={submit}><label>Email address<input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" /></label><button className="button" disabled={busy}>{busy ? 'Please wait…' : 'Email me a link'}</button></form>{message && <p className="notice" role="status">{message}</p>}{error && <p className="notice error" role="alert">{error}</p>}<button className="text-link" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage(''); setError('') }}>{mode === 'signin' ? 'New here? Create an account' : 'Already registered? Sign in'}</button></dialog>
-
+  return <dialog className="auth-dialog" ref={dialog} onCancel={onClose} aria-labelledby="auth-title"><button className="dialog-close icon-button" onClick={onClose} aria-label="Close sign in"><X size={20} /></button><h2 id="auth-title">{mode === 'signup' ? 'Create an account' : 'Sign in'}</h2><p>Save stories to read later.</p><button className="button secondary google-signin" disabled={busy} onClick={googleSignIn}>Continue with Google</button><p className="auth-divider">or use your email</p><form onSubmit={submit}><label>Email address<input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" /></label>{!useOtp && <label>Password<input required type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={event => setPassword(event.target.value)} placeholder="••••••••" /></label>}<button className="button" disabled={busy}>{busy ? 'Please wait…' : useOtp ? 'Email me a link' : mode === 'signup' ? 'Create account' : 'Sign in'}</button></form><button type="button" className="text-link" style={{ fontSize: '13px', display: 'block', margin: '4px 0 14px' }} onClick={() => { setUseOtp(!useOtp); setError(''); setMessage('') }}>{useOtp ? 'Sign in with password instead' : 'Email me a magic link instead'}</button>{message && <p className="notice" role="status">{message}</p>}{error && <p className="notice error" role="alert">{error}</p>}<button className="text-link" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage(''); setError('') }}>{mode === 'signin' ? 'New here? Create an account' : 'Already registered? Sign in'}</button></dialog>
 }
 export default App
+
