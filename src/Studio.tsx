@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import ReactMarkdown from 'react-markdown'
-import { ArrowLeft, Plus, Eye, Pencil, Upload, ExternalLink, Star } from 'lucide-react'
+import { MarkdownContent } from './lib/MarkdownContent'
+import { ArrowLeft, Plus, Eye, Pencil, Upload, ExternalLink, Star, Image as ImageIcon, Video, Share2 } from 'lucide-react'
 import { database } from './lib/supabase'
 import { categories, formatDate, placeholder, safeImage, slugify, validatePost, youtubeId } from './lib/content'
 import type { Post, PostInput } from './lib/content'
@@ -81,8 +81,25 @@ export function Studio() {
 function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; onSaved: () => void }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const [form, setForm] = useState<PostInput>(post ? { title: post.title, slug: post.slug, excerpt: post.excerpt, body: post.body, category: post.category, status: post.status, cover_url: post.cover_url, youtube_url: post.youtube_url, score: post.score, featured: post.featured, published_at: post.published_at } : blank)
-  const [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [preview, setPreview] = useState(false), [error, setError] = useState('')
+  const [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [inlineUploading, setInlineUploading] = useState(false), [preview, setPreview] = useState(false), [error, setError] = useState('')
   function change<K extends keyof PostInput>(key: K, value: PostInput[K]) { setDirty(true); setForm(current => ({ ...current, [key]: value })) }
+  async function uploadInlineImage(file: File | undefined) {
+    if (!file) return
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setError('Choose a JPG, PNG or WebP image up to 5 MB.')
+      return
+    }
+    setInlineUploading(true); setError('')
+    try {
+      const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1]
+      const path = `inline/${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await database().storage.from('covers').upload(path, file, { contentType: file.type, upsert: false })
+      if (uploadError) throw uploadError
+      const url = database().storage.from('covers').getPublicUrl(path).data.publicUrl
+      insertFormat(`\n\n![${file.name.replace(/\.[^/.]+$/, '')}](${url})\n\n`)
+    } catch { setError('Inline image couldn’t be uploaded. Check storage permissions.') }
+    finally { setInlineUploading(false) }
+  }
   function insertFormat(prefix: string, suffix = '') {
     const el = bodyRef.current
     if (!el) return
@@ -131,7 +148,7 @@ function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; 
   function close() { if (!dirty || window.confirm('Discard unsaved changes?')) onClose() }
   return <section><div className="editor-heading"><button className="back-link" onClick={close}><ArrowLeft size={16} /> All posts</button><button className="button secondary" onClick={() => setPreview(!preview)}><Eye size={17} /> {preview ? 'Back to editor' : 'Preview'}</button></div><h1>{post ? 'Edit post' : 'New post'}</h1>
     {error && <p className="notice error" role="alert">{error}</p>}
-    {preview ? <div className="editor-preview"><p className="eyebrow">UNPUBLISHED PREVIEW</p><h1>{form.title || 'Untitled post'}</h1><p className="article-deck">{form.excerpt}</p><img className="cover" src={form.cover_url ? safeImage(form.cover_url) : placeholder} alt="Cover preview" /><div className="article-body"><ReactMarkdown>{form.body}</ReactMarkdown></div>{youtubeId(form.youtube_url) && <iframe className="video" src={`https://www.youtube-nocookie.com/embed/${youtubeId(form.youtube_url)}`} title="Video preview" allowFullScreen />}</div>
+    {preview ? <div className="editor-preview"><p className="eyebrow">UNPUBLISHED PREVIEW</p><h1>{form.title || 'Untitled post'}</h1><p className="article-deck">{form.excerpt}</p><img className="cover" src={form.cover_url ? safeImage(form.cover_url) : placeholder} alt="Cover preview" /><div className="article-body"><MarkdownContent content={form.body} /></div>{youtubeId(form.youtube_url) && <iframe className="video" src={`https://www.youtube-nocookie.com/embed/${youtubeId(form.youtube_url)}`} title="Video preview" allowFullScreen />}</div>
     : <form className="editor-form" onSubmit={save}><div className="writing-area">
       <label>Title<input required maxLength={200} value={form.title} onChange={e => { const title = e.target.value; setDirty(true); setForm(current => ({ ...current, title, slug: !post && (!current.slug || current.slug === slugify(current.title)) ? slugify(title) : current.slug })) }} /></label>
       <label>Article URL<input required maxLength={200} value={form.slug} onChange={e => change('slug', e.target.value)} /><small>astrobitplays.me/?article={form.slug || 'your-article-title'}</small></label>
@@ -145,6 +162,9 @@ function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; 
           <button type="button" className="toolbar-btn" onClick={() => insertFormat('> ', '')} title="Quote">Quote</button>
           <button type="button" className="toolbar-btn" onClick={() => insertFormat('- ', '')} title="Bullet list">List</button>
           <button type="button" className="toolbar-btn" onClick={() => insertFormat('[', '](https://)')} title="Link">Link</button>
+          <label className="toolbar-btn upload-btn" title="Upload and insert image inline" style={{ cursor: 'pointer' }}><ImageIcon size={14} /> {inlineUploading ? 'Uploading…' : 'Image'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={inlineUploading || busy} style={{ display: 'none' }} onChange={e => { void uploadInlineImage(e.target.files?.[0]); e.target.value = '' }} /></label>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('\n\nhttps://www.youtube.com/watch?v=', '\n\n')} title="Embed YouTube Video"><Video size={14} /> YouTube</button>
+          <button type="button" className="toolbar-btn" onClick={() => insertFormat('\n\nhttps://x.com/username/status/123456789\n\n')} title="Embed X / Tweet"><Share2 size={14} /> X / Tweet</button>
         </div>
         <textarea ref={bodyRef} className="body-editor" required maxLength={200000} value={form.body} onChange={e => change('body', e.target.value)} />
         <small>Markdown supported: ## headings, **bold**, *italic*, links and lists. Use Preview to check formatting.</small>

@@ -1391,3 +1391,77 @@ td:first-child {
         transition: color .12s, background-color .12s
     }
 }
+
+/* Rich Content: Inline Images, YouTube Embeds & X/Twitter Cards */
+.body-image-figure {
+    margin: 32px 0;
+    text-align: center;
+}
+.body-image-figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+.image-caption {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+    font-style: italic;
+    line-height: 1.4;
+}
+.body-embed-wrapper {
+    display: block;
+    margin: 28px 0;
+    width: 100%;
+}
+.body-video {
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+.tweet-embed-card {
+    display: block;
+    margin: 24px 0;
+    padding: 16px 20px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fafbfc;
+    border-left: 4px solid #000;
+}
+.tweet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.tweet-author {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.tweet-badge {
+    background: #0f172a;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.tweet-content {
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.5;
+    margin: 8px 0;
+    font-style: italic;
+}
+.tweet-link {
+    display: inline-block;
+    font-size: 13px;
+    color: #0284c7;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: 4px;
+}
+.tweet-link:hover {
+    text-decoration: underline;
+}
