@@ -261,9 +261,14 @@ a:hover h3,
 .cover {
     display: block;
     width: 100%;
+    height: auto;
     aspect-ratio: 16/8.5;
     object-fit: cover;
     background: #08111b
+}
+
+.cover-loading {
+    background: #eef2f5;
 }
 
 .lead-story h1 {

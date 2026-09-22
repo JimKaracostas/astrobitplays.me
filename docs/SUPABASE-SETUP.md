@@ -54,6 +54,8 @@ Article reads are recorded events, deduplicated by browser session, article and 
 
 This Vite app uses query-string article URLs so direct links work with GitHub Pages. Articles are client rendered; per-article social previews and crawler-friendly server rendering would require a subsequent hosting/rendering change.
 
+Each deployment now rebuilds `/sitemap.xml` and `/stories/` from public articles. Publishing in the dashboard does not itself redeploy those static files. See [Search and SEO](SEARCH-AND-SEO.md) for refresh and Search Console instructions.
+
 ## Verification
 
 `npm test` runs the migration in disposable in-memory PostgreSQL with isolated test users. It checks RLS, owner-only publishing, hidden drafts, isolated bookmarks, storage access, deduplicated analytics, unpublishing and conflicting saves. It also checks draft recovery, image insertion, Markdown rendering, recognized video hosts and content validation. It never writes test content to Supabase. `npm run build` checks TypeScript and builds the site; `npm run lint` checks source code.

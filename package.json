@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run build:seo",
+    "build:seo": "tsx --tsconfig tsconfig.test.json scripts/build-seo.ts",
     "lint": "oxlint",
     "test": "tsx --tsconfig tsconfig.test.json scripts/test-all.mjs",
     "preview": "vite preview"

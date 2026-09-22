@@ -22,3 +22,5 @@ Run `npm test`, `npm run lint` and `npm run build` to verify changes.
 Tests use a disposable local database and do not create content in Supabase.
 
 See [Supabase setup](docs/SUPABASE-SETUP.md) for authentication, owner access and deployment configuration.
+
+The production build generates a sitemap, robots file and HTML article directory from published posts. See [Search and SEO](docs/SEARCH-AND-SEO.md) for Search Console submission, sitemap refreshes and hosting limitations.
