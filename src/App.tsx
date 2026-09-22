@@ -65,24 +65,33 @@ export function App() {
       if (active) { setUser(data.session?.user || null); setAuthReady(true); if (authError) setAccountError('Your session could not be restored. Please sign in again.') }
     }).catch(() => { if (active) { setAuthReady(true); setAccountError('Sign-in is temporarily unavailable.') } })
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) { setUser(session?.user || null); setAuthReady(true); if (session) setSignIn(false) }
+      if (active) {
+        const nextUser = session?.user || null
+        setUser(prev => (prev?.id === nextUser?.id ? prev : nextUser))
+        setAuthReady(true)
+        if (session) setSignIn(false)
+      }
     })
     return () => { active = false; data.subscription.unsubscribe() }
   }, [])
+  const userId = user?.id
   useEffect(() => {
     let active = true
-    // Clear the previous account's permissions immediately when its session changes.
-    // oxlint-disable-next-line react/set-state-in-effect
-    setOwner(false); setSaved([]); setRoleReady(false)
-    if (!user || !supabase) { setRoleReady(true); return }
-    Promise.all([supabase.rpc('is_owner'), supabase.from('bookmarks').select('post_id').eq('user_id', user.id)]).then(([role, bookmarks]) => {
+    if (!userId || !supabase) {
+      setOwner(false)
+      setSaved([])
+      setRoleReady(true)
+      return
+    }
+    Promise.all([supabase.rpc('is_owner'), supabase.from('bookmarks').select('post_id').eq('user_id', userId)]).then(([role, bookmarks]) => {
       if (!active) return
-      setOwner(role.data === true); setRoleReady(true)
+      setOwner(role.data === true)
+      setRoleReady(true)
       if (!bookmarks.error) setSaved((bookmarks.data || []).map(item => item.post_id))
       if (role.error || bookmarks.error) setAccountError('Your account is signed in, but account features are not ready yet.')
     }).catch(() => { if (active) { setRoleReady(true); setAccountError('Account features are temporarily unavailable.') } })
     return () => { active = false }
-  }, [user])
+  }, [userId])
   useEffect(() => {
     let active = true
     if (!supabase) return

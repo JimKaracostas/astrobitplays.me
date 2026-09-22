@@ -47,7 +47,32 @@ function errorMessage(error: unknown) {
 export function Studio() {
   const [posts, setPosts] = useState<Post[]>([]), [stats, setStats] = useState<Stat[] | null>(null)
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [message, setMessage] = useState('')
-  const [editing, setEditing] = useState<Post | 'new' | null>(null), [filter, setFilter] = useState('all')
+  const [editing, setEditing] = useState<Post | 'new' | null>(() => {
+    try {
+      const active = sessionStorage.getItem('astrobit_active_edit')
+      if (active === 'new') return 'new'
+      if (active) {
+        const post = sessionStorage.getItem('astrobit_active_post')
+        if (post) return JSON.parse(post)
+      }
+    } catch {}
+    return null
+  }), [filter, setFilter] = useState('all')
+  function setEditingTarget(target: Post | 'new' | null) {
+    setEditing(target)
+    try {
+      if (!target) {
+        sessionStorage.removeItem('astrobit_active_edit')
+        sessionStorage.removeItem('astrobit_active_post')
+      } else if (target === 'new') {
+        sessionStorage.setItem('astrobit_active_edit', 'new')
+        sessionStorage.removeItem('astrobit_active_post')
+      } else {
+        sessionStorage.setItem('astrobit_active_edit', target.id)
+        sessionStorage.setItem('astrobit_active_post', JSON.stringify(target))
+      }
+    } catch {}
+  }
   async function load() {
     setLoading(true); setError('')
     try {
@@ -68,20 +93,32 @@ export function Studio() {
   // Load and synchronize the remote dashboard when it mounts.
   // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => { void load() }, [])
-  if (editing) return <Editor key={typeof editing === 'string' ? 'new' : editing.id} post={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setMessage('Post saved.'); void load() }} />
+  if (editing) return <Editor key={typeof editing === 'string' ? 'new' : editing.id} post={editing === 'new' ? undefined : editing} onClose={() => setEditingTarget(null)} onSaved={() => { setEditingTarget(null); setMessage('Post saved.'); void load() }} />
   const visible = posts.filter(post => filter === 'all' || post.status === filter)
-  return <section><div className="studio-heading"><div><p className="eyebrow">ASTROBITPLAYS</p><h1>Dashboard</h1></div><button className="button" onClick={() => { setMessage(''); setEditing('new') }}><Plus size={18} /> New post</button></div>
+  return <section><div className="studio-heading"><div><p className="eyebrow">ASTROBITPLAYS</p><h1>Dashboard</h1></div><button className="button" onClick={() => { setMessage(''); setEditingTarget('new') }}><Plus size={18} /> New post</button></div>
     {message && <p className="notice" role="status">{message}</p>}{error && <p className="notice error" role="alert">{error} <button className="text-link" onClick={load}>Retry</button></p>}
     <div className="stats-grid"><div><span>Published posts</span><strong>{loading ? '—' : posts.filter(p => p.status === 'published').length}</strong></div><div><span>Drafts</span><strong>{loading ? '—' : posts.filter(p => p.status === 'draft').length}</strong></div><div><span>Article reads</span><strong>{loading || !stats ? '—' : stats.reduce((sum, item) => sum + Number(item.total_views), 0)}</strong></div><div><span>Reads · last 30 days</span><strong>{loading || !stats ? '—' : stats.reduce((sum, item) => sum + Number(item.recent_views), 0)}</strong></div></div>
     <p className="stats-note">Reads count each browser session once per article per day. Your own reads are excluded. These counts are estimates, not unique people.</p>
     <div className="posts-toolbar"><h2>Your posts</h2><label>Show<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">All posts</option><option value="draft">Drafts</option><option value="published">Published</option></select></label></div>
-    {loading ? <p role="status">Loading posts…</p> : visible.length ? <div className="table-wrap"><table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Reads</th><th>Updated</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{visible.map(post => <tr key={post.id}><td>{post.title}</td><td>{post.category}</td><td><span className={`post-status ${post.status}`}>{post.status}</span></td><td>{stats ? Number(stats.find(item => item.post_id === post.id)?.total_views || 0) : '—'}</td><td>{formatDate(post.updated_at)}</td><td><div className="table-actions"><button className="text-link" onClick={() => { setMessage(''); setEditing(post) }}><Pencil size={15} /> Edit<span className="sr-only"> {post.title}</span></button>{post.status === 'published' && <a className="text-link" href={`/?article=${encodeURIComponent(post.slug)}`} target="_blank" rel="noreferrer"><ExternalLink size={15} /> View</a>}</div></td></tr>)}</tbody></table></div> : <div className="dashboard-empty"><h3>{filter === 'all' ? 'Your first post starts here' : `No ${filter} posts`}</h3><p>{filter === 'all' ? 'Write a story, save it as a draft, and publish when it’s ready.' : 'Posts with this status will appear here.'}</p></div>}
+    {loading ? <p role="status">Loading posts…</p> : visible.length ? <div className="table-wrap"><table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Reads</th><th>Updated</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{visible.map(post => <tr key={post.id}><td>{post.title}</td><td>{post.category}</td><td><span className={`post-status ${post.status}`}>{post.status}</span></td><td>{stats ? Number(stats.find(item => item.post_id === post.id)?.total_views || 0) : '—'}</td><td>{formatDate(post.updated_at)}</td><td><div className="table-actions"><button className="text-link" onClick={() => { setMessage(''); setEditingTarget(post) }}><Pencil size={15} /> Edit<span className="sr-only"> {post.title}</span></button>{post.status === 'published' && <a className="text-link" href={`/?article=${encodeURIComponent(post.slug)}`} target="_blank" rel="noreferrer"><ExternalLink size={15} /> View</a>}</div></td></tr>)}</tbody></table></div> : <div className="dashboard-empty"><h3>{filter === 'all' ? 'Your first post starts here' : `No ${filter} posts`}</h3><p>{filter === 'all' ? 'Write a story, save it as a draft, and publish when it’s ready.' : 'Posts with this status will appear here.'}</p></div>}
   </section>
 }
 function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; onSaved: () => void }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
-  const [form, setForm] = useState<PostInput>(post ? { title: post.title, slug: post.slug, excerpt: post.excerpt, body: post.body, category: post.category, status: post.status, cover_url: post.cover_url, youtube_url: post.youtube_url, score: post.score, featured: post.featured, published_at: post.published_at } : blank)
+  const storageKey = post ? `astrobit_draft_${post.id}` : 'astrobit_draft_new'
+  const [form, setForm] = useState<PostInput>(() => {
+    try {
+      const saved = sessionStorage.getItem(storageKey)
+      if (saved) return JSON.parse(saved)
+    } catch {}
+    return post ? { title: post.title, slug: post.slug, excerpt: post.excerpt, body: post.body, category: post.category, status: post.status, cover_url: post.cover_url, youtube_url: post.youtube_url, score: post.score, featured: post.featured, published_at: post.published_at } : blank
+  })
   const [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false), [uploading, setUploading] = useState(false), [inlineUploading, setInlineUploading] = useState(false), [preview, setPreview] = useState(false), [error, setError] = useState('')
+  useEffect(() => {
+    if (dirty) {
+      try { sessionStorage.setItem(storageKey, JSON.stringify(form)) } catch {}
+    }
+  }, [form, dirty, storageKey])
   function change<K extends keyof PostInput>(key: K, value: PostInput[K]) { setDirty(true); setForm(current => ({ ...current, [key]: value })) }
   async function uploadInlineImage(file: File | undefined) {
     if (!file) return
@@ -127,6 +164,11 @@ function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; 
     try {
       const result = post ? await database().from('posts').update(payload).eq('id', post.id).select('id').single() : await database().from('posts').insert(payload).select('id').single()
       if (result.error) throw result.error
+      try {
+        sessionStorage.removeItem(storageKey)
+        sessionStorage.removeItem('astrobit_active_edit')
+        sessionStorage.removeItem('astrobit_active_post')
+      } catch {}
       setDirty(false); onSaved()
     } catch (err) { setError(errorMessage(err)) }
     finally { setBusy(false) }
@@ -145,7 +187,16 @@ function Editor({ post, onClose, onSaved }: { post?: Post; onClose: () => void; 
     } catch { setError('The image couldn’t be uploaded. Check your connection and storage permissions.') }
     finally { setUploading(false) }
   }
-  function close() { if (!dirty || window.confirm('Discard unsaved changes?')) onClose() }
+  function close() {
+    if (!dirty || window.confirm('Discard unsaved changes?')) {
+      try {
+        sessionStorage.removeItem(storageKey)
+        sessionStorage.removeItem('astrobit_active_edit')
+        sessionStorage.removeItem('astrobit_active_post')
+      } catch {}
+      onClose()
+    }
+  }
   return <section><div className="editor-heading"><button className="back-link" onClick={close}><ArrowLeft size={16} /> All posts</button><button className="button secondary" onClick={() => setPreview(!preview)}><Eye size={17} /> {preview ? 'Back to editor' : 'Preview'}</button></div><h1>{post ? 'Edit post' : 'New post'}</h1>
     {error && <p className="notice error" role="alert">{error}</p>}
     {preview ? <div className="editor-preview"><p className="eyebrow">UNPUBLISHED PREVIEW</p><h1>{form.title || 'Untitled post'}</h1><p className="article-deck">{form.excerpt}</p><img className="cover" src={form.cover_url ? safeImage(form.cover_url) : placeholder} alt="Cover preview" /><div className="article-body"><MarkdownContent content={form.body} /></div>{youtubeId(form.youtube_url) && <iframe className="video" src={`https://www.youtube-nocookie.com/embed/${youtubeId(form.youtube_url)}`} title="Video preview" allowFullScreen />}</div>
