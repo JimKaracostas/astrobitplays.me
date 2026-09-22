@@ -22,20 +22,30 @@ export function slugify(value: string) {
   return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 export function youtubeId(value: string | null | undefined): string | null {
-  if (!value || typeof value !== 'string') return null
-  const match = value.match(/(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i)
-  return match ? match[1] : null
+  if (!value?.trim()) return null
+  try {
+    const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) return null
+    const host = url.hostname.replace(/^(www|m)\./, '')
+    const id = host === 'youtu.be' ? url.pathname.slice(1) : ['youtube.com', 'youtube-nocookie.com'].includes(host)
+      ? url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)\/?$/)?.[1] : null
+    return id && /^[\w-]{11}$/.test(id) ? id : null
+  } catch { return null }
 }
 export function safeImage(value: string) {
   if (!value || typeof value !== 'string') return placeholder
-  if (value.startsWith('/')) return value
+  if (value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')) return value
   try { return ['https:', 'http:'].includes(new URL(value).protocol) ? value : placeholder } catch { return placeholder }
 }
 export function validatePost(post: PostInput) {
   if (!post.title.trim()) return 'Add a title.'
+  if (post.title.trim().length > 200) return 'Keep the title under 201 characters.'
+  if (post.slug.length > 200) return 'Keep the article URL under 201 characters.'
+  if (post.excerpt?.length > 400) return 'Keep the summary under 401 characters.'
+  if (post.body.length > 200000) return 'The article is too long to save.'
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(post.slug)) return 'Use lowercase letters, numbers and hyphens for the URL.'
   if (!post.body.trim()) return 'Write the article before saving.'
-  if (post.cover_url && safeImage(post.cover_url) === placeholder) return 'Use a valid image URL.'
+  if (post.cover_url && (!post.cover_url.startsWith('https://') || safeImage(post.cover_url) === placeholder)) return 'Use an HTTPS cover image URL, or leave it blank for the galaxy cover.'
   if (post.youtube_url && !youtubeId(post.youtube_url)) return 'Enter a valid YouTube video URL.'
   if (post.category === 'Videos' && !youtubeId(post.youtube_url)) return 'Add a YouTube URL for this video post.'
   if (post.score !== null && (!Number.isFinite(post.score) || post.score < 0 || post.score > 10)) return 'The review score must be between 0 and 10.'
@@ -49,4 +59,3 @@ export function readingTime(text: string): string {
   const minutes = Math.max(1, Math.ceil(words / 220))
   return `${minutes} min read`
 }
-

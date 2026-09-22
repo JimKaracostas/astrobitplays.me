@@ -81,6 +81,11 @@ test('Database enforces owner-only publishing, reader isolation and real view co
     await assert.rejects(as('authenticated', reader, 'select * from private.post_views'), /permission denied/)
     await assert.rejects(as('authenticated', reader, "insert into storage.objects(bucket_id,name) values ('covers','bad.png')"), /row-level security/)
     await as('authenticated', owner, "insert into storage.objects(bucket_id,name) values ('covers','owner.png')")
+    const previous = (await as('authenticated', owner, `select updated_at::text as version from public.posts where id='${published}'`))[0].version
+    const firstSave = await as('authenticated', owner, `update public.posts set excerpt='First edit' where id='${published}' and updated_at='${previous}' returning id`)
+    assert.equal(firstSave.length, 1)
+    const staleSave = await as('authenticated', owner, `update public.posts set excerpt='Stale edit' where id='${published}' and updated_at='${previous}' returning id`)
+    assert.equal(staleSave.length, 0, 'An older tab must not overwrite a newer save')
     await as('authenticated', owner, `update public.posts set status='draft' where id='${published}'`)
     assert.equal((await as('anon', null, 'select * from public.posts')).length, 0)
     assert.equal((await as('authenticated', owner, `select published_at from public.posts where id='${published}'`))[0].published_at, null)

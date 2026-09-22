@@ -1,151 +1,53 @@
 import type { ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { safeImage, placeholder } from './content'
+import { safeImage, placeholder, youtubeId } from './content'
 
-interface MarkdownContentProps {
-  content: string
-}
-
-function getFullText(node: ReactNode): string {
-  if (!node) return ''
+function collectText(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node)
-  if (Array.isArray(node)) return node.map(getFullText).join('')
-  if (typeof node === 'object' && node && 'props' in node) {
-    return getFullText((node as { props?: { children?: ReactNode } }).props?.children)
-  }
+  if (Array.isArray(node)) return node.map(collectText).join('')
+  if (node && typeof node === 'object' && 'props' in node) return collectText((node.props as { children?: ReactNode }).children)
   return ''
 }
-
-function extractAllYoutubeIds(node: ReactNode): string[] {
-  const ids: string[] = []
-  function walk(n: ReactNode) {
-    if (!n) return
-    if (typeof n === 'string') {
-      const regex = /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/gi
-      let match: RegExpExecArray | null
-      while ((match = regex.exec(n)) !== null) {
-        if (!ids.includes(match[1])) ids.push(match[1])
-      }
-    } else if (Array.isArray(n)) {
-      n.forEach(walk)
-    } else if (typeof n === 'object' && n && 'props' in n) {
-      const props = (n as { props?: { href?: string; children?: ReactNode } }).props
-      if (props?.href) {
-        const m = props.href.match(/(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i)
-        if (m && !ids.includes(m[1])) ids.push(m[1])
-      }
-      if (props?.children) walk(props.children)
-    }
+function collectUrls(node: ReactNode): string[] {
+  if (typeof node === 'string') return node.split(/\s+/).filter(Boolean)
+  if (Array.isArray(node)) return node.flatMap(collectUrls)
+  if (node && typeof node === 'object' && 'props' in node) {
+    const props = node.props as { href?: string; children?: ReactNode }
+    return [...(props.href ? [props.href] : []), ...collectUrls(props.children)]
   }
-  walk(node)
-  return ids
+  return []
+}
+function tweet(value: string) {
+  try {
+    const url = new URL(value)
+    if (!['https:', 'http:'].includes(url.protocol) || !['x.com', 'twitter.com', 'www.x.com', 'www.twitter.com'].includes(url.hostname)) return null
+    const match = url.pathname.match(/^\/([\w]+)\/status\/(\d+)\/?$/)
+    return match ? { username: match[1], id: match[2], url: `https://x.com/${match[1]}/status/${match[2]}` } : null
+  } catch { return null }
 }
 
-function extractAllTweets(node: ReactNode): Array<{ url: string; username: string; id: string }> {
-  const tweets: Array<{ url: string; username: string; id: string }> = []
-  function walk(n: ReactNode) {
-    if (!n) return
-    if (typeof n === 'string') {
-      const regex = /(https?:\/\/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\/([0-9]+))/gi
-      let match: RegExpExecArray | null
-      while ((match = regex.exec(n)) !== null) {
-        if (!tweets.some(t => t.id === match![3])) {
-          tweets.push({ url: match[1], username: match[2], id: match[3] })
-        }
-      }
-    } else if (Array.isArray(n)) {
-      n.forEach(walk)
-    } else if (typeof n === 'object' && n && 'props' in n) {
-      const props = (n as { props?: { href?: string; children?: ReactNode } }).props
-      if (props?.href) {
-        const m = props.href.match(/^https?:\/\/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\/([0-9]+)/i)
-        if (m && !tweets.some(t => t.id === m[2])) {
-          tweets.push({ url: props.href, username: m[1], id: m[2] })
-        }
-      }
-      if (props?.children) walk(props.children)
-    }
-  }
-  walk(node)
-  return tweets
-}
-
-export function MarkdownContent({ content }: MarkdownContentProps) {
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        img: ({ src, alt }) => (
-          <figure className="body-image-figure">
-            <img
-              src={src ? safeImage(src) : placeholder}
-              alt={alt || ''}
-              loading="lazy"
-              onError={e => {
-                e.currentTarget.onerror = null
-                e.currentTarget.src = placeholder
-              }}
-            />
-            {alt && <figcaption className="image-caption">{alt}</figcaption>}
-          </figure>
-        ),
-        p: ({ children }) => {
-          const ytIds = extractAllYoutubeIds(children)
-          const tweets = extractAllTweets(children)
-
-          if (ytIds.length === 0 && tweets.length === 0) {
-            return <p>{children}</p>
-          }
-
-          const rawText = getFullText(children).trim()
-          const cleanText = rawText
-            .replace(/https?:\/\/[^\s]+/gi, '')
-            .replace(/[<>\[\]()]/g, '')
-            .trim()
-          const isSolelyEmbed = cleanText.length === 0
-
-          return (
-            <>
-              {!isSolelyEmbed && <p>{children}</p>}
-              {ytIds.map(id => (
-                <div key={id} className="body-embed-wrapper">
-                  <iframe
-                    className="video body-video"
-                    src={`https://www.youtube-nocookie.com/embed/${id}`}
-                    title="YouTube video"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-              {tweets.map(t => (
-                <div key={t.id} className="tweet-embed-card">
-                  <div className="tweet-header">
-                    <span className="tweet-author">@{t.username} on X</span>
-                    <span className="tweet-badge">X Post</span>
-                  </div>
-                  <p className="tweet-content">“{t.url}”</p>
-                  <a className="tweet-link" href={t.url} target="_blank" rel="noopener noreferrer">
-                    View on X (Twitter) →
-                  </a>
-                </div>
-              ))}
-            </>
-          )
-        },
-        a: ({ href, children }) => {
-          if (!href) return <span>{children}</span>
-          return (
-            <a href={href} target="_blank" rel="noopener noreferrer">
-              {children}
-            </a>
-          )
-        }
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  )
+export function MarkdownContent({ content }: { content: string }) {
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
+    img: ({ src, alt }) => <figure className="body-image-figure"><img src={src ? safeImage(src) : placeholder} alt={alt || ''} loading="lazy" onError={event => {
+      if (event.currentTarget.getAttribute('src') !== placeholder) event.currentTarget.src = placeholder
+    }} />{alt && <figcaption className="image-caption">{alt}</figcaption>}</figure>,
+    p: ({ children, node }) => {
+      const urls = [...new Set(collectUrls(children))]
+      const videos = [...new Set(urls.map(youtubeId).filter((id): id is string => !!id))]
+      const tweets = [...new Map(urls.map(tweet).filter(item => item !== null).map(item => [item.id, item])).values()]
+      const embedUrls = urls.filter(url => youtubeId(url) || tweet(url))
+      const text = collectText(children).trim()
+      // Only hide URLs that actually became embeds. Keep unrelated links and prose.
+      const solelyEmbeds = embedUrls.length > 0 && embedUrls.reduce((rest, url) => rest.split(url).join(''), text).trim() === ''
+      const hasImage = node?.children.some(child => child.type === 'element' && (child.tagName === 'img' || child.children.some(inner => inner.type === 'element' && inner.tagName === 'img')))
+      return <>
+        {!solelyEmbeds && (hasImage ? <div className="body-paragraph">{children}</div> : <p>{children}</p>)}
+        {videos.map(id => <div className="body-embed-wrapper" key={id}><iframe className="video body-video" src={`https://www.youtube-nocookie.com/embed/${id}`} title="YouTube video" allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" /></div>)}
+        {tweets.map(item => <aside className="tweet-embed-card" key={item.id}><a href={item.url} target="_blank" rel="noopener noreferrer">View @{item.username}’s post on X</a></aside>)}
+      </>
+    },
+    a: ({ href, children }) => href ? <a href={href} target="_blank" rel="noopener noreferrer">{children}</a> : <span>{children}</span>,
+    table: ({ children }) => <div className="table-wrap"><table>{children}</table></div>,
+  }}>{content}</ReactMarkdown>
 }
