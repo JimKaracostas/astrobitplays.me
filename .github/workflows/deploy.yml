@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
 
 permissions:
   contents: read
@@ -17,6 +19,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ github.event_name != 'schedule' || steps.content.outputs.changed == 'true' }}
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,26 +32,32 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Compare published content
+        id: content
+        if: github.event_name == 'schedule'
+        run: npx tsx --tsconfig tsconfig.test.json scripts/check-content.ts
+
       - name: Check source and publishing rules
+        if: github.event_name != 'schedule' || steps.content.outputs.changed == 'true'
         run: npm run lint && npm test
 
       - name: Build production bundle
+        if: github.event_name != 'schedule' || steps.content.outputs.changed == 'true'
         run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Upload artifact
+        if: github.event_name != 'schedule' || steps.content.outputs.changed == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: "./dist"
 
   deploy:
+    if: needs.build.outputs.deploy == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

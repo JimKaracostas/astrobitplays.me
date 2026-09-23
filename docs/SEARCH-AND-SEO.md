@@ -1,41 +1,51 @@
-# Search and indexing
+# Publishing, search and SEO
 
-## What the production build creates
+The site publishes News and Reviews only. The homepage displays up to five actual articles, ordered by pinned placement, featured status, position and publication date. No sample stories or placeholder statistics are created.
 
-- `/sitemap.xml`: homepage, article directory, legal pages, populated categories and published articles. Drafts, future publication dates, saved articles, dashboard and search queries are excluded. Modification dates come from article records, not the build clock.
-- `/robots.txt`: permits crawling and points to the sitemap. Private pages use `noindex` after rendering; database authorization still protects private data.
-- `/stories/`: a plain HTML directory of published stories, with ordinary crawlable links and no JavaScript dependency.
-- `/404.html`: the GitHub Pages error document, marked `noindex`.
+## Publishing tools
 
-The browser sets a unique title, description, canonical URL and Article/NewsArticle JSON-LD for each published article. Canonical URLs retain the existing `/?article=slug` format and omit tracking parameters. Search, saved/account pages and missing articles use `noindex`. Legal pages have canonical URLs in their original HTML.
+The owner dashboard supports:
+- Drafts, immediate publishing and scheduled publication. The editor shows dates in your local time; Supabase stores UTC. Future posts remain hidden from readers until their publication time.
+- Revision history and restore-as-draft, with conflict protection. Restoring unpublishes the current version until you publish the restored draft.
+- A library of uploaded cover and inline images.
+- Review details: game, platforms, developer, release date, verdict, pros and cons.
+- Homepage top-story count and section ordering.
 
-Article markup uses real publication/update timestamps and AstroBitPlays as the organizational author. Review scores are not presented as aggregated user ratings. No invented content or statistics are added.
+Apply both SQL migrations in chronological order on a new Supabase project. The editorial migration was confirmed applied to this project on 23 September 2026.
 
-## Google Search Console
+## Article pages and discovery
 
-The owner confirmed the domain is already verified. The deployed sitemap and robots file were checked successfully on 23 September 2026; see [live verification](SEO-VERIFICATION.md). To submit the sitemap:
+Articles use paths such as `/news/article-slug/` and `/reviews/article-slug/`. Existing query-string article links still open and update to the clean URL.
 
-1. Open the verified `astrobitplays.me` property and its **Sitemaps** page.
-2. Submit `https://astrobitplays.me/sitemap.xml` (or `sitemap.xml` if the property UI already supplies the origin).
-3. Use **URL inspection → Test live URL** on the homepage and one published article. Check the rendered HTML for the headline, description, canonical URL and article JSON-LD.
-4. Request indexing for a representative article. Check the Page indexing report later; a successful sitemap submission does not guarantee indexing or ranking.
+The production build fetches only published, due News and Reviews posts, then prerenders the homepage, category pages and full article bodies. Each article includes its own title, description, canonical URL, social-card metadata and Article or NewsArticle structured data in the original HTML. Review scores are editorial scores, never invented aggregate ratings.
 
-Use Google's [Rich Results Test](https://search.google.com/test/rich-results) to inspect a live article's structured data. Eligibility is not a promise that Google will display a rich result.
+`/sitemap.xml` and `/stories/` contain only public, due articles. Private account pages and search results are excluded from indexing. Unknown paths receive the Pages 404 shell.
 
-## Keeping the sitemap current
+## Automatic refresh
 
-`npm run build` fetches public article metadata anonymously and generates the sitemap and HTML directory. The existing GitHub Pages workflow runs this command on deployment. Database errors stop the build rather than publish a silently incomplete sitemap.
+The GitHub Pages workflow checks published content every 15 minutes and rebuilds only when content or homepage settings changed. Pushes to main and manual workflow runs always build. This starts after the workflow change reaches the repository's default branch; GitHub Actions must remain enabled.
 
-Publishing, editing and unpublishing in the dashboard change the live database immediately. **The static sitemap and directory refresh on the next deployment.** Run the existing **Deploy AstroBitPlays to GitHub Pages** workflow from GitHub Actions after changing published content if no code deployment is already planned. No scheduled rebuild or database webhook has been configured.
+Readers fetch current content from Supabase when loading the app. Static HTML, social previews and the sitemap update after the next scheduled run and deployment. GitHub can delay scheduled runs. A new clean URL may initially receive the 404 shell until that deployment, and old static HTML can remain until a rebuild after unpublishing. For an urgent removal or immediate static update, run the deploy workflow manually.
 
-Use `npm run preview -- --host 127.0.0.1 --port 4173` after building to inspect the generated files. They are generated in `dist`, not served by Vite's development server.
+The build fails on database errors instead of publishing an incomplete snapshot. Only the public Supabase key is used. No service-role key or GitHub personal token is needed.
 
-## Performance changes
+## Verification
 
-Homepage and category requests omit article bodies. Reading a story fetches its full body; searching still includes full text. Lead/article covers load eagerly with high priority; card images load lazily. Cover dimensions reserve layout space. Loading the homepage uses an empty visual placeholder instead of downloading the 2.25 MB galaxy image before replacing it. The header and favicon use the existing 417 kB JPEG logo instead of the 1.89 MB PNG.
+Run `npm run lint`, `npm test` and `npm run build`. Tests use an isolated PostgreSQL instance; they never insert content into the production database. Preview the generated pages with `npm run preview`; Vite development mode does not serve prerendered HTML.
 
-## Current hosting limits
+The domain is already verified in Search Console. Submit `https://astrobitplays.me/sitemap.xml` and inspect a clean article URL after deployment. Indexing and ranking remain Google's decision.
 
-Articles remain client-rendered. Google can process JavaScript, but other crawlers may not; social bots can still see the generic metadata in the original HTML. Per-article HTML and reliable article-specific social cards require prerendering or server rendering, with a publishing-to-build update mechanism. The HTML directory improves discovery but does not replace article prerendering. No ranking or indexing result has been verified in Search Console during implementation.
+## Icons and assets
 
-References: [Google sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [JavaScript SEO](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics), [Article structured data](https://developers.google.com/search/docs/appearance/structured-data/article).
+The supplied logo is encoded as a 16/32/48-pixel favicon, a 32-pixel PNG, an Apple touch icon and 192/512-pixel home-screen icons. Regenerate them on Windows with `./scripts/build-icons.ps1`. The web manifest does not install a service worker or cache private account content.
+
+## Google sign-in
+
+Supabase's Google provider must contain the Web application OAuth client ID ending in `.apps.googleusercontent.com` and its matching secret. A domain name is not a client ID. Keep the secret in Supabase, never the frontend or repository.
+
+The Google client's authorized redirect URI is:
+`https://yodtnppcsmyeymbnmvsu.supabase.co/auth/v1/callback`
+
+Google Cloud branding verification is separate from configuring this client. Start a new sign-in after changing the configuration.
+
+References: [Supabase Google authentication](https://supabase.com/docs/guides/auth/social-login/auth-google), [Google JavaScript SEO](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics), [GitHub scheduled workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
