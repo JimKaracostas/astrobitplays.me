@@ -13,7 +13,7 @@ Article markup uses real publication/update timestamps and AstroBitPlays as the 
 
 ## Google Search Console
 
-The owner confirmed the domain is already verified. After deploying these changes:
+The owner confirmed the domain is already verified. The deployed sitemap and robots file were checked successfully on 23 September 2026; see [live verification](SEO-VERIFICATION.md). To submit the sitemap:
 
 1. Open the verified `astrobitplays.me` property and its **Sitemaps** page.
 2. Submit `https://astrobitplays.me/sitemap.xml` (or `sitemap.xml` if the property UI already supplies the origin).
