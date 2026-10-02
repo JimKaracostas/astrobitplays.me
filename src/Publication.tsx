@@ -6,32 +6,21 @@ import {
   featuredStories,
   formatDate,
   placeholder,
-  safeImage,
 } from "./lib/content";
 import type { Post, SiteSettings } from "./lib/content";
+import { CoverImage } from "./CoverImage";
 
 export function StoryCover({
   post,
   priority = false,
+  sizes = "(max-width: 680px) 104px, (max-width: 1000px) 45vw, 400px",
 }: {
   post: Post;
   priority?: boolean;
+  sizes?: string;
 }) {
   return (
-    <img
-      className="cover"
-      src={post.cover_url ? safeImage(post.cover_url) : placeholder}
-      width={1600}
-      height={900}
-      alt=""
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : "auto"}
-      decoding="async"
-      onError={(event) => {
-        if (event.currentTarget.getAttribute("src") !== placeholder)
-          event.currentTarget.src = placeholder;
-      }}
-    />
+    <CoverImage source={post.cover_url} priority={priority} sizes={sizes} />
   );
 }
 export function StoryCard({
@@ -117,7 +106,7 @@ export function HomePage({
             {featured.map((post, index) => (
               <article key={post.id} className="feature-story">
                 <a className="feature-image" href={articlePath(post)} aria-label={post.title}>
-                  <StoryCover post={post} priority={index < 2} />
+                  <StoryCover post={post} priority={index === 0} sizes={featured.length === 1 ? "(max-width: 680px) calc(100vw - 36px), (max-width: 1000px) 90vw, 900px" : index > 0 && featured.length > 2 ? "(max-width: 680px) 104px, 150px" : "(max-width: 680px) calc(100vw - 36px), 55vw"} />
                 </a>
                 <div className="feature-copy">
                   <div className="story-kicker">

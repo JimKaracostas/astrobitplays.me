@@ -15,13 +15,12 @@ import {
   Newspaper,
   BookOpen,
   UserRound,
+  Trash2,
 } from "lucide-react";
 import { database, supabase, trackView } from "./lib/supabase";
 import {
   categories,
   formatDate,
-  placeholder,
-  safeImage,
   youtubeId,
   readingTime,
 } from "./lib/content";
@@ -32,6 +31,10 @@ import { HomePage, ReviewVerdict } from "./Publication";
 import { applyMetadata, articleUrl, pageMetadata } from "./lib/seo";
 import { discoverStories } from "./lib/discovery";
 import type { StorySort } from "./lib/discovery";
+import { CoverImage } from "./CoverImage";
+import { CoverImagesContext } from "./lib/cover-images";
+import type { CoverManifest } from "./lib/cover-images";
+import { deviceBookmarksKey, readDeviceBookmarks, persistDeviceBookmarks, toggleBookmark, deviceImportIds } from "./lib/reading-list";
 const LazyStudio = lazy(() =>
   import("./Studio").then((module) => ({ default: module.Studio })),
 );
@@ -85,38 +88,14 @@ export function StarRating({
   );
 }
 
-function Cover({
-  post,
-  priority = false,
-}: {
-  post?: Post;
-  priority?: boolean;
-}) {
-  return (
-    <img
-      className="cover"
-      width={1600}
-      height={900}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : "auto"}
-      decoding="async"
-      src={post?.cover_url ? safeImage(post.cover_url) : placeholder}
-      alt={post ? post.title : "Blue stars and galaxy clouds"}
-      onError={(e) => {
-        e.currentTarget.onerror = null;
-        e.currentTarget.src = placeholder;
-      }}
-    />
-  );
-}
 function SectionTitle({ children }: { children: ReactNode }) {
   return <h2 className="section-title">{children}</h2>;
 }
-function PostCard({ post }: { post: Post }) {
+function PostCard({ post, onRemove, removing }: { post: Post; onRemove?: () => void; removing?: boolean }) {
   return (
     <article className="post-card">
       <a href={articlePath(post)}>
-        <Cover post={post} />
+        <CoverImage source={post.cover_url} sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1000px) 45vw, 400px" />
         <div className="post-meta">
           {post.category} <span>{formatDate(post.published_at)}</span>
         </div>
@@ -132,6 +111,9 @@ function PostCard({ post }: { post: Post }) {
           </span>
         </div>
       )}
+      {onRemove && <button className="reading-list-remove text-link" type="button" disabled={removing} onClick={onRemove}>
+        <Trash2 size={15} aria-hidden="true" /> Remove from saved<span className="sr-only">: {post.title}</span>
+      </button>}
     </article>
   );
 }
@@ -139,10 +121,12 @@ function PostCard({ post }: { post: Post }) {
 export function App({
   initialPosts,
   initialSettings,
+  initialImages = {},
   location: initialLocation,
 }: {
   initialPosts?: Post[];
   initialSettings?: SiteSettings;
+  initialImages?: CoverManifest;
   location?: string;
 } = {}) {
   const [{ params, isSearch, unknownPath, section, query, page, slug }] =
@@ -158,7 +142,15 @@ export function App({
   const roleReady = !user || roleUserId === user.id;
   const [posts, setPosts] = useState<Post[]>(initialPosts || []),
     [storedSaved, setSaved] = useState<string[]>([]);
-  const saved = user && roleUserId === user.id ? storedSaved : noSavedArticles;
+  const [deviceSaved, setDeviceSaved] = useState<string[]>([]);
+  const saved = user ? (roleUserId === user.id ? storedSaved : noSavedArticles) : deviceSaved;
+  const [bookmarkNotice, setBookmarkNotice] = useState<{ message: string; undoId?: string } | null>(null);
+  const [bookmarksFailed, setBookmarksFailed] = useState(false);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
+  const [accountRefresh, setAccountRefresh] = useState(0);
+  const bookmarkBusy = useRef(false);
+  const deviceWritesAvailable = useRef(true);
+  const currentActor = useRef<string | null>(null);
   const urlError =
     params.get("error_description") ||
     (typeof window !== "undefined" &&
@@ -194,6 +186,15 @@ export function App({
     },
     [],
   );
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Read device bookmarks after hydration.
+    setDeviceSaved(readDeviceBookmarks());
+    function synchronize(event: StorageEvent) {
+      if (event.key === deviceBookmarksKey || event.key === null) setDeviceSaved(readDeviceBookmarks());
+    }
+    window.addEventListener("storage", synchronize);
+    return () => window.removeEventListener("storage", synchronize);
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -202,6 +203,7 @@ export function App({
       .getSession()
       .then(({ data, error: authError }) => {
         if (active) {
+          currentActor.current = data.session?.user.id || null;
           setUser(data.session?.user || null);
           setAuthReady(true);
           if (authError)
@@ -219,6 +221,8 @@ export function App({
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (active) {
         const nextUser = session?.user || null;
+        if (currentActor.current !== (nextUser?.id || null)) setBookmarkNotice(null);
+        currentActor.current = nextUser?.id || null;
         setUser((prev) => (prev?.id === nextUser?.id ? prev : nextUser));
         setAuthReady(true);
         if (session) setSignIn(false);
@@ -259,6 +263,7 @@ export function App({
             ? []
             : (bookmarks.data || []).map((item) => item.post_id),
         );
+        setBookmarksFailed(!!bookmarks.error);
         if (role.error || bookmarks.error)
           setAccountError(
             "Your account is signed in, but account features are not ready yet.",
@@ -269,13 +274,14 @@ export function App({
           setOwner(false);
           setSaved([]);
           setRoleUserId(userId);
+          setBookmarksFailed(true);
           setAccountError("Account features are temporarily unavailable.");
         }
-      });
+      }).finally(() => { if (active) setBookmarksLoading(false); });
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, [userId, accountRefresh]);
   useEffect(() => {
     let active = true;
     if (!supabase) return;
@@ -377,10 +383,25 @@ export function App({
       );
   }, [post, authReady, roleReady]);
   async function bookmark(postId: string) {
+    if (!authReady || !roleReady || bookmarkBusy.current) return;
+    const title = posts.find((item) => item.id === postId)?.title || "Article";
     if (!user) {
-      setSignIn(true);
+      const current = deviceWritesAvailable.current ? readDeviceBookmarks(deviceSaved) : deviceSaved;
+      const removing = current.includes(postId);
+      if (!removing && current.length >= 1000) {
+        setAccountError("Your device reading list is full. Remove a saved article before adding another.");
+        return;
+      }
+      const next = toggleBookmark(current, postId);
+      const persisted = persistDeviceBookmarks(next);
+      deviceWritesAvailable.current = persisted;
+      setDeviceSaved(next);
+      setAccountError("");
+      setBookmarkNotice({ message: removing ? `“${title}” removed from saved articles.` : persisted ? `“${title}” saved on this device.` : `“${title}” saved for this visit. Your browser prevented device storage.`, undoId: removing ? postId : undefined });
       return;
     }
+    const actingUser = user.id;
+    bookmarkBusy.current = true;
     setSaving(true);
     setAccountError("");
     try {
@@ -393,14 +414,47 @@ export function App({
             .eq("user_id", user.id)
         : await database()
             .from("bookmarks")
-            .insert({ post_id: postId, user_id: user.id });
+            .upsert({ post_id: postId, user_id: user.id }, { onConflict: "user_id,post_id", ignoreDuplicates: true });
       if (saveError) throw saveError;
+      if (currentActor.current !== actingUser) return;
       setSaved((current) =>
         existing ? current.filter((id) => id !== postId) : [...current, postId],
       );
+      setBookmarkNotice({ message: existing ? `“${title}” removed from saved articles.` : `“${title}” saved to your account.`, undoId: existing ? postId : undefined });
     } catch {
-      setAccountError("Couldn’t update your saved articles. Please try again.");
+      if (currentActor.current === actingUser) setAccountError("Couldn’t update your saved articles. Please try again.");
     } finally {
+      bookmarkBusy.current = false;
+      setSaving(false);
+    }
+  }
+  const importIds = useMemo(() => deviceImportIds(deviceSaved, posts.map((item) => item.id)), [deviceSaved, posts]);
+  async function importDeviceSaves() {
+    if (!user || !roleReady || bookmarksFailed || bookmarkBusy.current || !importIds.length) return;
+    const actingUser = user.id;
+    const importing = [...importIds];
+    bookmarkBusy.current = true;
+    setSaving(true);
+    setAccountError("");
+    try {
+      const { error: importError } = await database().from("bookmarks").upsert(
+        importing.map((postId) => ({ user_id: actingUser, post_id: postId })),
+        { onConflict: "user_id,post_id", ignoreDuplicates: true },
+      );
+      if (importError) throw importError;
+      if (currentActor.current !== actingUser) return;
+      setSaved((current) => [...new Set([...current, ...importing])]);
+      const imported = new Set(importing);
+      const currentDeviceSaves = deviceWritesAvailable.current ? readDeviceBookmarks(deviceSaved) : deviceSaved;
+      const remaining = currentDeviceSaves.filter((id) => !imported.has(id));
+      const persisted = persistDeviceBookmarks(remaining);
+      deviceWritesAvailable.current = persisted;
+      setDeviceSaved(remaining);
+      setBookmarkNotice({ message: `${importing.length} device ${importing.length === 1 ? "save added" : "saves added"} to your account.${persisted ? "" : " Your browser prevented updating the device list; those saves may appear again on your next visit."}` });
+    } catch {
+      if (currentActor.current === actingUser) setAccountError("Couldn’t add your device saves to this account. Your device list is still available; try again.");
+    } finally {
+      bookmarkBusy.current = false;
       setSaving(false);
     }
   }
@@ -444,7 +498,7 @@ export function App({
   );
   const listing = !!section || params.has("q") || page === "saved";
   return (
-    <>
+    <CoverImagesContext.Provider value={initialImages}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
@@ -534,9 +588,9 @@ export function App({
                 </button>
               </>
             ) : (
-              <button className="text-button" onClick={() => setSignIn(true)}>
+              <><a href="/?page=saved">Saved</a><button className="text-button" onClick={() => setSignIn(true)}>
                 Sign in
-              </button>
+              </button></>
             )}
           </div>
         </div>
@@ -550,6 +604,14 @@ export function App({
             {accountError}
           </p>
         )}
+        {bookmarkNotice && <div className="notice bookmark-notice" role="status">
+          <p>{bookmarkNotice.message}</p>
+          {bookmarkNotice.undoId && <button className="text-link" disabled={saving} onClick={() => {
+            const id = bookmarkNotice.undoId!;
+            setBookmarkNotice(null);
+            void bookmark(id);
+          }}>Undo</button>}
+        </div>}
         {unknownPath ? (
           <div className="access-state">
             <h1>Page not found</h1>
@@ -619,7 +681,7 @@ export function App({
                     <button
                       className="save-button"
                       onClick={() => bookmark(post.id)}
-                      disabled={saving}
+                      disabled={saving || !authReady || !roleReady || (!!user && bookmarksFailed)}
                       aria-pressed={saved.includes(post.id)}
                     >
                       <Bookmark
@@ -630,7 +692,7 @@ export function App({
                     </button>
                   </div>
                 </div>
-                <Cover post={post} priority />
+                <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
                 <ArticleReader content={post.body} />
 
                 {youtubeId(post.youtube_url) && (
@@ -687,7 +749,15 @@ export function App({
               </h1>
               <a href="/">All stories</a>
             </div>
-            {!loading && !error && (page !== "saved" || (authReady && roleReady && user)) && (
+            {page === "saved" && authReady && !user && <div className="reading-list-banner">
+              <div><h2>Your reading list, on this device</h2><p>Save stories without an account. Sign in to keep a reading list across your devices.</p></div>
+              <button className="button secondary" onClick={() => setSignIn(true)}>Sign in to sync</button>
+            </div>}
+            {page === "saved" && user && roleReady && !bookmarksFailed && importIds.length > 0 && <div className="reading-list-banner">
+              <div><h2>Bring your device saves with you</h2><p>{importIds.length} {importIds.length === 1 ? "article is" : "articles are"} saved on this device. Add them to this account to read anywhere.</p></div>
+              <button className="button secondary" disabled={saving} onClick={() => void importDeviceSaves()}>Add device saves to my account</button>
+            </div>}
+            {!loading && !error && (page !== "saved" || (authReady && roleReady && (!user || (!bookmarksLoading && !bookmarksFailed)))) && (
               <div className="discovery-toolbar">
                 {!section && <div className="discovery-filters" role="group" aria-label="Filter articles by category">
                   {["", ...categories].map((category) => (
@@ -707,14 +777,12 @@ export function App({
                 <p className="discovery-count" role="status">{filtered.length} {filtered.length === 1 ? "article" : "articles"}{query.trim() ? ` matching “${query.trim()}”` : ""}</p>
               </div>
             )}
-            {page === "saved" && (!authReady || !roleReady) ? (
+            {page === "saved" && (!authReady || !roleReady || (user && bookmarksLoading)) ? (
               <p role="status">Loading your saved articles…</p>
-            ) : page === "saved" && !user ? (
-              <div className="access-state">
-                <p>Sign in to save stories and read them later.</p>
-                <button className="button" onClick={() => setSignIn(true)}>
-                  Sign in
-                </button>
+            ) : page === "saved" && user && bookmarksFailed ? (
+              <div className="notice error" role="alert">
+                <p>Your saved articles couldn’t be loaded.</p>
+                <button className="button secondary" onClick={() => { setAccountError(""); setBookmarksLoading(true); setAccountRefresh((current) => current + 1); }}>Try again</button>
               </div>
             ) : loading ? (
               <p role="status">Loading articles…</p>
@@ -727,7 +795,7 @@ export function App({
               <>
                 <div className="post-grid">
                   {filtered.slice(0, limit).map((item) => (
-                    <PostCard key={item.id} post={item} />
+                    <PostCard key={item.id} post={item} onRemove={page === "saved" ? () => void bookmark(item.id) : undefined} removing={saving} />
                   ))}
                 </div>
                 {filtered.length > limit && (
@@ -742,8 +810,8 @@ export function App({
             ) : (
               <div className="discovery-empty">
                 <Search size={28} aria-hidden="true" />
-                <h2>{query.trim() ? "No matching articles" : page === "saved" ? "Your reading list starts here" : "No articles here yet"}</h2>
-                <p>{query.trim() ? "Try a game title, developer or a shorter search." : page === "saved" ? "Open a story and choose Save article to keep it for later." : "New stories will appear here as they’re published."}</p>
+                <h2>{query.trim() ? "No matching articles" : listingCategory ? `No ${listingCategory.toLowerCase()}${page === "saved" ? " in your reading list" : " here yet"}` : page === "saved" ? "Your reading list starts here" : "No articles here yet"}</h2>
+                <p>{query.trim() ? "Try a game title, developer or a shorter search." : listingCategory ? "Clear the category filter to see all articles." : page === "saved" ? "Open a story and choose Save article to keep it for later." : "New stories will appear here as they’re published."}</p>
                 {listingCategory && <button className="button secondary" onClick={() => { setListingCategory(""); setLimit(12); }}>Clear category filter</button>}
                 <a className="text-link" href="/">Explore top stories</a>
               </div>
@@ -814,7 +882,7 @@ export function App({
         <a href="/?page=saved" aria-current={page === 'saved' ? 'page' : undefined}><Bookmark size={21} /><span>Saved</span></a>
       </nav>
       {signIn && <SignIn onClose={() => setSignIn(false)} />}
-    </>
+    </CoverImagesContext.Provider>
   );
 }
 function SignIn({ onClose }: { onClose: () => void }) {

@@ -4,6 +4,7 @@ import type { Post, SiteSettings } from "../src/lib/content";
 import { pageMetadata } from "../src/lib/seo";
 import { parseRoute } from "../src/lib/routes";
 import { escapeXml } from "./seo-files";
+import type { CoverManifest } from "../src/lib/cover-images";
 
 export const safeJson = (value: unknown) =>
   JSON.stringify(value)
@@ -17,6 +18,7 @@ export async function renderPage(
   path: string,
   posts: Post[],
   settings: SiteSettings,
+  images: CoverManifest = {},
 ) {
   const route = parseRoute(path);
   const seed = posts.map((post) => ({
@@ -24,7 +26,7 @@ export async function renderPage(
     body: post.slug === route.slug ? post.body : "",
   }));
   const stream = await renderToReadableStream(
-    <App initialPosts={seed} initialSettings={settings} location={path} />,
+    <App initialPosts={seed} initialSettings={settings} initialImages={images} location={path} />,
   );
   await stream.allReady;
   const markup = await new Response(stream).text();

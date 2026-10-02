@@ -3,6 +3,10 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import type { Post, SiteSettings } from "./lib/content";
+import type { CoverManifest } from "./lib/cover-images";
+let images: CoverManifest = {};
+try { images = JSON.parse(document.getElementById("cover-images")?.textContent || "{}"); }
+catch { /* Original covers remain available without generated images. */ }
 
 let initial: { posts?: Post[]; settings?: SiteSettings; path?: string } = {};
 try {
@@ -15,7 +19,7 @@ try {
 
 const app = (
   <StrictMode>
-    <App initialPosts={initial.posts} initialSettings={initial.settings} />
+    <App initialPosts={initial.posts} initialSettings={initial.settings} initialImages={images} />
   </StrictMode>
 );
 const container = document.getElementById("root")!;

@@ -6,6 +6,7 @@ import { categories } from "../src/lib/content";
 import { articlePath, categoryPath } from "../src/lib/routes";
 import { fetchPublication } from "./public-content";
 import { rssXml } from "./rss";
+import { loadCoverManifest } from "./image-assets";
 import { renderPage } from "./prerender";
 
 const now = new Date();
@@ -14,6 +15,7 @@ const sitemap = sitemapXml(posts, now);
 if (Buffer.byteLength(sitemap, "utf8") > 50 * 1024 * 1024)
   throw new Error("Sitemap exceeds the size limit.");
 const shell = await readFile("dist/index.html", "utf8");
+const images = await loadCoverManifest();
 await mkdir("dist/stories", { recursive: true });
 await writeFile("dist/sitemap.xml", sitemap);
 await writeFile("dist/feed.xml", rssXml(posts, now));
@@ -44,7 +46,7 @@ for (const path of paths) {
     throw new Error("Invalid publication path");
   const file = join("dist", path.slice(1), "index.html");
   await mkdir(dirname(file), { recursive: true });
-  await writeFile(file, await renderPage(shell, path, posts, settings));
+  await writeFile(file, await renderPage(shell, path, posts, settings, images));
 }
 console.log(
   `Rendered ${paths.length} pages and rebuilt the sitemap from ${posts.length} published articles.`,

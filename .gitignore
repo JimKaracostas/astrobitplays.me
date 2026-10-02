@@ -21,6 +21,8 @@ coverage/
 test-results/
 playwright-report/
 .vite/
+.generated/
+public/generated/
 *.tsbuildinfo
 supabase/.temp/
 supabase/.branches/

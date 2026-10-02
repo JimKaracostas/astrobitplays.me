@@ -212,6 +212,10 @@ test("Database enforces owner-only publishing, reader isolation and real view co
       reader,
       `insert into public.bookmarks(user_id,post_id) values ('${reader}','${published}')`,
     );
+    await as("authenticated", reader,
+      `insert into public.bookmarks(user_id,post_id) values ('${reader}','${published}') on conflict(user_id,post_id) do nothing`);
+    await assert.rejects(as("authenticated", reader,
+      `insert into public.bookmarks(user_id,post_id) values ('${reader}','${published}'),('${reader}','${draft}') on conflict(user_id,post_id) do nothing`), /row-level security/);
     assert.equal(
       (await as("authenticated", reader, "select * from public.bookmarks"))
         .length,
