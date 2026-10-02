@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { safeImage, placeholder, youtubeId } from "./content";
+import { remarkHeadingIds } from "./reader";
 
 function collectText(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
@@ -48,7 +49,7 @@ function tweet(value: string) {
 export function MarkdownContent({ content }: { content: string }) {
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkHeadingIds]}
       skipHtml
       components={{
         img: ({ src, alt }) => (
@@ -127,7 +128,11 @@ export function MarkdownContent({ content }: { content: string }) {
         },
         a: ({ href, children }) =>
           href ? (
-            <a href={href} target="_blank" rel="noopener noreferrer">
+            <a
+              href={href}
+              target={href.startsWith("#") || (href.startsWith("/") && !href.startsWith("//")) ? undefined : "_blank"}
+              rel={href.startsWith("#") || (href.startsWith("/") && !href.startsWith("//")) ? undefined : "noopener noreferrer"}
+            >
               {children}
             </a>
           ) : (

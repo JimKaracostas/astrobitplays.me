@@ -7,7 +7,8 @@ export type SitemapPost = Pick<
   "title" | "slug" | "category" | "status" | "published_at" | "updated_at"
 >;
 export function escapeXml(value: string) {
-  return value.replace(
+  // oxlint-disable-next-line no-control-regex -- XML 1.0 forbids these control characters.
+  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(
     /[&<>"']/g,
     (character) =>
       ({
@@ -19,7 +20,7 @@ export function escapeXml(value: string) {
       })[character]!,
   );
 }
-export function publicPosts(posts: SitemapPost[], now = new Date()) {
+export function publicPosts<T extends SitemapPost>(posts: T[], now = new Date()) {
   return posts.filter(
     (post) =>
       categories.includes(post.category) &&

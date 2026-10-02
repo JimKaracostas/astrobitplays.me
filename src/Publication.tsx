@@ -72,11 +72,13 @@ export function HomePage({
   settings = defaultSettings,
   loading,
   error,
+  onRetry,
 }: {
   posts: Post[];
   settings?: SiteSettings;
   loading: boolean;
   error: string;
+  onRetry: () => void;
 }) {
   const featured = featuredStories(posts, settings.featured_limit);
   return (
@@ -100,9 +102,10 @@ export function HomePage({
             Loading the latest stories…
           </div>
         ) : error ? (
-          <p className="notice error" role="alert">
-            {error}
-          </p>
+          <div className="notice error" role="alert">
+            <p>{error}</p>
+            <button className="button secondary" onClick={onRetry}>Try again</button>
+          </div>
         ) : !featured.length ? (
           <div className="publication-empty">
             <img className="cover" src={placeholder} alt="Blue galaxy" />

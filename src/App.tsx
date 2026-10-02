@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -25,23 +25,26 @@ import {
   youtubeId,
   readingTime,
 } from "./lib/content";
-import type { Post, SiteSettings } from "./lib/content";
+import type { Category, Post, SiteSettings } from "./lib/content";
 import { defaultSettings, normalizeSettings } from "./lib/content";
 import { articlePath, categoryPath, parseRoute } from "./lib/routes";
 import { HomePage, ReviewVerdict } from "./Publication";
 import { applyMetadata, articleUrl, pageMetadata } from "./lib/seo";
+import { discoverStories } from "./lib/discovery";
+import type { StorySort } from "./lib/discovery";
 const LazyStudio = lazy(() =>
   import("./Studio").then((module) => ({ default: module.Studio })),
 );
-const LazyMarkdownContent = lazy(() =>
-  import("./lib/MarkdownContent").then((module) => ({
-    default: module.MarkdownContent,
+const noSavedArticles: string[] = [];
+const LazyArticleReader = lazy(() =>
+  import("./ArticleReader").then((module) => ({
+    default: module.ArticleReader,
   })),
 );
-function MarkdownContent({ content }: { content: string }) {
+function ArticleReader({ content }: { content: string }) {
   return (
     <Suspense fallback={<p role="status">Loading article text…</p>}>
-      <LazyMarkdownContent content={content} />
+      <LazyArticleReader content={content} />
     </Suspense>
   );
 }
@@ -142,8 +145,8 @@ export function App({
   initialSettings?: SiteSettings;
   location?: string;
 } = {}) {
-  const { params, isSearch, unknownPath, section, query, page, slug } =
-    parseRoute(initialLocation || window.location.href);
+  const [{ params, isSearch, unknownPath, section, query, page, slug }] =
+    useState(() => parseRoute(initialLocation || window.location.href));
   const [settings, setSettings] = useState<SiteSettings>(
     initialSettings || defaultSettings,
   );
@@ -155,7 +158,7 @@ export function App({
   const roleReady = !user || roleUserId === user.id;
   const [posts, setPosts] = useState<Post[]>(initialPosts || []),
     [storedSaved, setSaved] = useState<string[]>([]);
-  const saved = user && roleUserId === user.id ? storedSaved : [];
+  const saved = user && roleUserId === user.id ? storedSaved : noSavedArticles;
   const urlError =
     params.get("error_description") ||
     (typeof window !== "undefined" &&
@@ -172,6 +175,15 @@ export function App({
     [saving, setSaving] = useState(false),
     [limit, setLimit] = useState(12);
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [listingCategory, setListingCategory] = useState<Category | "">("");
+  const [listingSort, setListingSort] = useState<StorySort>(query.trim() ? "relevance" : "newest");
+  const [reload, setReload] = useState(0);
+  function retryContent() {
+    setError("");
+    setLoading(true);
+    setReload((current) => current + 1);
+  }
   const [mobileSearch, setMobileSearch] = useState(isSearch);
   const [mobileAccount, setMobileAccount] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
@@ -267,7 +279,9 @@ export function App({
   useEffect(() => {
     let active = true;
     if (!supabase) return;
-    async function loadPosts() {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20000);
+    async function loadFeed() {
       const all: Post[] = [];
       for (let offset = 0; ; offset += 1000) {
         const fields = query
@@ -281,8 +295,9 @@ export function App({
           .lte("published_at", new Date().toISOString())
           .order("published_at", { ascending: false })
           .order("id")
-          .range(offset, offset + 999);
-        if (!active) return;
+          .range(offset, offset + 999)
+          .abortSignal(controller.signal);
+        if (!active) return [];
         if (loadError) throw loadError;
         all.push(
           ...(data as unknown as Post[]).map((item) => ({
@@ -292,16 +307,24 @@ export function App({
         );
         if (data.length < 1000) break;
       }
-      if (slug && !query) {
-        const { data: article, error: articleError } = await database()
+      return all;
+    }
+    async function loadPosts() {
+      const [all, articleResult] = await Promise.all([
+        loadFeed(),
+        slug && !query ? database()
           .from("posts")
           .select("*")
           .eq("slug", slug)
           .eq("status", "published")
           .in("category", [...categories])
           .lte("published_at", new Date().toISOString())
-          .maybeSingle();
-        if (!active) return;
+          .abortSignal(controller.signal)
+          .maybeSingle() : Promise.resolve(null),
+      ]);
+      if (!active) return;
+      if (articleResult) {
+        const { data: article, error: articleError } = articleResult;
         if (articleError) throw articleError;
         const index = all.findIndex((item) => item.slug === slug);
         if (article && index >= 0) all[index] = article as Post;
@@ -318,11 +341,13 @@ export function App({
         setError("Articles couldn’t be loaded. Please try again later.");
         setLoading(false);
       }
-    });
+    }).finally(() => window.clearTimeout(timeout));
     return () => {
       active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, [slug, query]);
+  }, [slug, query, reload]);
   const post = posts.find((item) => item.slug === slug);
   useEffect(() => {
     applyMetadata(
@@ -389,27 +414,33 @@ export function App({
     }
   }
   async function shareArticle() {
+    if (sharing) return;
+    setSharing(true);
     try {
-      await navigator.clipboard.writeText(
-        post ? articleUrl(post.slug, post.category) : window.location.href,
-      );
+      const url = post ? articleUrl(post.slug, post.category) : window.location.href;
+      if (navigator.share) {
+        await navigator.share({ title: post?.title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       if (copyTimer.current) clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } catch (shareError) {
+      if (shareError instanceof Error && shareError.name === "AbortError") return;
       setAccountError(
         "The link couldn’t be copied. You can copy it from your browser’s address bar.",
       );
+    } finally {
+      setSharing(false);
     }
   }
-  const filtered = posts.filter(
-    (item) =>
-      (!section || item.category === section) &&
-      (!query ||
-        `${item.title} ${item.excerpt} ${item.body}`
-          .toLowerCase()
-          .includes(query.toLowerCase())) &&
-      (page !== "saved" || saved.includes(item.id)),
+  const filtered = useMemo(
+    () => discoverStories(posts, {
+      query, category: (section as Category) || listingCategory,
+      sort: listingSort, savedIds: page === "saved" ? saved : undefined,
+    }),
+    [posts, query, section, listingCategory, listingSort, page, saved],
   );
   const listing = !!section || params.has("q") || page === "saved";
   return (
@@ -449,7 +480,7 @@ export function App({
               <a
                 key={category}
                 href={categoryPath(category)}
-                aria-current={section === category ? "page" : undefined}
+                aria-current={section === category || post?.category === category ? "page" : undefined}
               >
                 {category}
               </a>
@@ -555,16 +586,17 @@ export function App({
           loading ? (
             <p role="status">Loading article…</p>
           ) : error ? (
-            <p role="alert" className="notice error">
-              {error}
-            </p>
+            <div role="alert" className="notice error">
+              <p>{error}</p>
+              <button className="button secondary" onClick={retryContent}>Try again</button>
+            </div>
           ) : post ? (
             <>
               <article className="article-page">
                 <a className="back-link" href={categoryPath(post.category)}>
                   <ArrowLeft size={16} /> {post.category}
                 </a>
-                <h1>{post.title}</h1>
+                <h1 id="article-title" tabIndex={-1}>{post.title}</h1>
                 <p className="article-deck">{post.excerpt}</p>
                 <div className="article-byline">
                   <span>
@@ -578,6 +610,7 @@ export function App({
                     <button
                       className="save-button"
                       onClick={shareArticle}
+                      disabled={sharing}
                       aria-label="Share article"
                     >
                       {copied ? <Check size={17} /> : <Share2 size={17} />}
@@ -598,9 +631,7 @@ export function App({
                   </div>
                 </div>
                 <Cover post={post} priority />
-                <div className="article-body">
-                  <MarkdownContent content={post.body} />
-                </div>
+                <ArticleReader content={post.body} />
 
                 {youtubeId(post.youtube_url) && (
                   <iframe
@@ -656,6 +687,26 @@ export function App({
               </h1>
               <a href="/">All stories</a>
             </div>
+            {!loading && !error && (page !== "saved" || (authReady && roleReady && user)) && (
+              <div className="discovery-toolbar">
+                {!section && <div className="discovery-filters" role="group" aria-label="Filter articles by category">
+                  {["", ...categories].map((category) => (
+                    <button key={category} type="button" aria-pressed={listingCategory === category}
+                      onClick={() => { setListingCategory(category as Category | ""); setLimit(12); }}>
+                      {category || "All articles"}
+                    </button>
+                  ))}
+                </div>}
+                <label className="discovery-sort"><span>Sort by</span>
+                  <select value={listingSort} onChange={(event) => { setListingSort(event.target.value as StorySort); setLimit(12); }}>
+                    {query.trim() && <option value="relevance">Best match</option>}
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                  </select>
+                </label>
+                <p className="discovery-count" role="status">{filtered.length} {filtered.length === 1 ? "article" : "articles"}{query.trim() ? ` matching “${query.trim()}”` : ""}</p>
+              </div>
+            )}
             {page === "saved" && (!authReady || !roleReady) ? (
               <p role="status">Loading your saved articles…</p>
             ) : page === "saved" && !user ? (
@@ -668,9 +719,10 @@ export function App({
             ) : loading ? (
               <p role="status">Loading articles…</p>
             ) : error ? (
-              <p className="notice error" role="alert">
-                {error}
-              </p>
+              <div className="notice error" role="alert">
+                <p>{error}</p>
+                <button className="button secondary" onClick={retryContent}>Try again</button>
+              </div>
             ) : filtered.length ? (
               <>
                 <div className="post-grid">
@@ -688,13 +740,13 @@ export function App({
                 )}
               </>
             ) : (
-              <p className="empty-text">
-                {query
-                  ? "No articles match your search."
-                  : page === "saved"
-                    ? "You haven’t saved any articles yet."
-                    : `No ${section.toLowerCase() || "articles"} published yet.`}
-              </p>
+              <div className="discovery-empty">
+                <Search size={28} aria-hidden="true" />
+                <h2>{query.trim() ? "No matching articles" : page === "saved" ? "Your reading list starts here" : "No articles here yet"}</h2>
+                <p>{query.trim() ? "Try a game title, developer or a shorter search." : page === "saved" ? "Open a story and choose Save article to keep it for later." : "New stories will appear here as they’re published."}</p>
+                {listingCategory && <button className="button secondary" onClick={() => { setListingCategory(""); setLimit(12); }}>Clear category filter</button>}
+                <a className="text-link" href="/">Explore top stories</a>
+              </div>
             )}
           </section>
         ) : (
@@ -703,6 +755,7 @@ export function App({
             settings={settings}
             loading={loading}
             error={error}
+            onRetry={retryContent}
           />
         )}
       </main>
@@ -748,6 +801,7 @@ export function App({
               TikTok
             </a>
             <a href="/stories/">All stories</a>
+            <a href="/feed.xml">RSS feed</a>
             <a href="/privacy/">Privacy Policy</a>
             <a href="/terms/">Terms of Service</a>
           </nav>

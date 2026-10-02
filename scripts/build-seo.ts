@@ -5,6 +5,7 @@ import { siteUrl } from "../src/lib/seo";
 import { categories } from "../src/lib/content";
 import { articlePath, categoryPath } from "../src/lib/routes";
 import { fetchPublication } from "./public-content";
+import { rssXml } from "./rss";
 import { renderPage } from "./prerender";
 
 const now = new Date();
@@ -15,6 +16,7 @@ if (Buffer.byteLength(sitemap, "utf8") > 50 * 1024 * 1024)
 const shell = await readFile("dist/index.html", "utf8");
 await mkdir("dist/stories", { recursive: true });
 await writeFile("dist/sitemap.xml", sitemap);
+await writeFile("dist/feed.xml", rssXml(posts, now));
 await writeFile(
   "dist/robots.txt",
   `User-agent: *\nAllow: /\n\nSitemap: ${siteUrl}/sitemap.xml\n`,

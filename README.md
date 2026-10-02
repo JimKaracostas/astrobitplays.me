@@ -9,6 +9,8 @@ Live Domain: [https://astrobitplays.me](https://astrobitplays.me)
 - Responsive editorial homepage using the supplied logo and a galaxy-only placeholder derived from its background.
 - News and Reviews categories, full-text search, and readable article URLs.
 - Google and email-link sign-in, reader accounts and private bookmarks.
+- Ranked, accent-insensitive search with category filters, sorting and useful empty states.
+- Article section navigation, reading progress, remembered text size and print layouts.
 - One database-designated owner with a private publishing dashboard.
 - Markdown editor and preview, covers, YouTube embeds, scores, featured posts, drafts, unpublishing and owner-only post deletion.
 - Recorded article-read totals and last-30-day counts. No simulated analytics.
@@ -18,6 +20,7 @@ Live Domain: [https://astrobitplays.me](https://astrobitplays.me)
 - Scheduled publishing, saved revisions with draft restoration, and a reusable media library.
 - Review verdicts, platforms, developer, release date, pros and cons.
 - Prerendered articles with social cards, sitemap and automatic content refresh.
+- RSS feed with the latest 50 published stories, available at `/feed.xml`.
 - Logo favicons and mobile home-screen icons.
 
 ## Development
