@@ -6,6 +6,8 @@ Project: `yodtnppcsmyeymbnmvsu` · Site: https://astrobitplays.me
 
 Run `supabase/migrations/202609210001_publication.sql` once in the project's SQL Editor. It creates posts, bookmarks, a covers bucket, a private owner record and article-view statistics. It inserts no articles, accounts or statistics. The user confirmed this migration has been applied.
 
+For post deletion, run `supabase/migrations/202610020001_post_deletion.sql` in the project's SQL Editor after the existing migrations. This grants delete access with an owner-only policy; pushing the frontend does not apply database migrations.
+
 ## Authentication
 
 In Authentication → URL Configuration:
@@ -49,6 +51,8 @@ The editor supports Markdown, preview, cover and inline image uploads up to 5 MB
 Unsaved edits are backed up in session storage, scoped to the signed-in account and article. The backup survives reloads in that tab; use Save draft to persist it to Supabase. Download draft exports the title, summary and body as Markdown. Ctrl/Cmd+S submits the current editor form; if its status is Published, that saves publicly. Saving an existing article checks its original `updated_at` so another tab's newer save cannot be overwritten silently. If a conflict occurs, download the draft before discarding it and reopening the latest post.
 
 The dashboard supports title/category search, status filters and sorting by update time, title or recorded reads.
+
+Choose Delete beside a post in the dashboard and confirm to permanently remove a draft, scheduled post or published article. Deletion also removes its bookmarks, read events and revision history; uploaded media remains available in the media library. A post changed in another tab must be refreshed before it can be deleted. Successful deletion clears that post's local draft backup and updates dashboard totals. Public search and share pages refresh through the existing deployment schedule.
 
 Article reads are recorded events, deduplicated by browser session, article and UTC day. Owner reads are excluded. No IP addresses or emails are stored in view events. Counts are approximate; browser storage blocking can undercount, and a determined caller can manufacture session identifiers. They are not audited unique visitor analytics. Dashboard totals and the last 30 days use these stored events.
 

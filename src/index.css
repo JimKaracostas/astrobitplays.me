@@ -920,6 +920,11 @@ td:first-child {
   color: #697486;
 }
 
+.danger-link,
+.danger-link:hover {
+  color: #b42318;
+}
+
 .post-status.published {
   color: #08724f;
 }

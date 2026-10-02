@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   Video,
   Share2,
+  Trash2,
 } from "lucide-react";
 import { database } from "./lib/supabase";
 import {
@@ -123,6 +124,57 @@ export function Studio({ userId }: { userId: string }) {
     [search, setSearch] = useState(""),
     [sort, setSort] = useState("updated");
   const [postsLoaded, setPostsLoaded] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const deleteInFlight = useRef(false);
+  async function deletePost(post: Post) {
+    if (deleteInFlight.current) return;
+    if (
+      !window.confirm(
+        `Permanently delete “${post.title}”? This also removes its saved revisions, bookmarks and read statistics. This cannot be undone.`,
+      )
+    ) return;
+    deleteInFlight.current = true;
+    setDeleting(post.id);
+    setError("");
+    setMessage("");
+    try {
+      const { error: deleteError } = await database()
+        .from("posts")
+        .delete()
+        .eq("id", post.id)
+        .eq("updated_at", post.updated_at)
+        .select("id")
+        .single();
+      if (deleteError) throw deleteError;
+      setPosts((current) => current.filter((item) => item.id !== post.id));
+      setStats((current) =>
+        current?.filter((item) => item.post_id !== post.id) ?? null,
+      );
+      try {
+        sessionStorage.removeItem(backupKey(userId, post.id));
+        sessionStorage.removeItem(`astrobit_draft_${post.id}`);
+        if (sessionStorage.getItem(activeKey) === post.id)
+          sessionStorage.removeItem(activeKey);
+      } catch {
+        /* Browser storage must not prevent a successful deletion. */
+      }
+      setMessage(
+        `“${post.title}” deleted. Search and share pages will sync automatically.`,
+      );
+    } catch (deleteError) {
+      setError(
+        typeof deleteError === "object" &&
+        deleteError &&
+        "code" in deleteError &&
+        deleteError.code === "PGRST116"
+          ? "This post changed or is no longer available. Refresh the list before trying to delete it again."
+          : "The post couldn’t be deleted. Check your connection and owner access, then try again.",
+      );
+    } finally {
+      deleteInFlight.current = false;
+      setDeleting(null);
+    }
+  }
   function setEditingTarget(target: Post | "new" | null) {
     setEditing(target);
     try {
@@ -226,6 +278,7 @@ export function Studio({ userId }: { userId: string }) {
         </div>
         <button
           className="button"
+          disabled={!!deleting}
           onClick={() => {
             setMessage("");
             setEditingTarget("new");
@@ -356,6 +409,7 @@ export function Studio({ userId }: { userId: string }) {
                     <div className="table-actions">
                       <button
                         className="text-link"
+                        disabled={!!deleting}
                         onClick={() => {
                           setMessage("");
                           setEditingTarget(post);
@@ -374,6 +428,16 @@ export function Studio({ userId }: { userId: string }) {
                           <ExternalLink size={15} /> View
                         </a>
                       )}
+                      <button
+                        type="button"
+                        className="text-link danger-link"
+                        disabled={!!deleting}
+                        onClick={() => void deletePost(post)}
+                      >
+                        <Trash2 size={15} />{" "}
+                        {deleting === post.id ? "Deleting…" : "Delete"}
+                        <span className="sr-only"> {post.title}</span>
+                      </button>
                     </div>
                   </td>
                 </tr>

@@ -79,6 +79,12 @@ test("Database enforces owner-only publishing, reader isolation and real view co
     ),
   );
   await db.exec(`insert into private.site_owner(user_id) values ('${owner}')`);
+  const deletionMigration = await readFile(
+    new URL("../supabase/migrations/202610020001_post_deletion.sql", import.meta.url),
+    "utf8",
+  );
+  await db.exec(deletionMigration);
+  await db.exec(deletionMigration);
   async function as(role, id, sql) {
     await db.exec("begin");
     try {
@@ -112,6 +118,15 @@ test("Database enforces owner-only publishing, reader isolation and real view co
     assert.equal(
       (await as("anon", null, "select * from public.posts")).length,
       1,
+    );
+    await assert.rejects(
+      as("anon", null, `delete from public.posts where id='${published}' returning id`),
+      /permission denied/,
+    );
+    assert.equal(
+      (await as("authenticated", reader, `delete from public.posts returning id`)).length,
+      0,
+      "Readers cannot delete published posts or drafts",
     );
     await assert.rejects(
       as(
@@ -383,6 +398,37 @@ test("Database enforces owner-only publishing, reader isolation and real view co
     assert.equal(
       (await as("anon", null, "select * from public.posts")).length,
       1,
+    );
+    assert.equal(
+      (await as("authenticated", owner, `delete from public.posts where id='${published}' and updated_at='${previous}' returning id`)).length,
+      0,
+      "A stale dashboard must not delete a newer edit",
+    );
+    const deletionVersion = (
+      await as("authenticated", owner, `select updated_at::text as version from public.posts where id='${published}'`)
+    )[0].version;
+    assert.equal(
+      (await as("authenticated", owner, `delete from public.posts where id='${published}' and updated_at='${deletionVersion}' returning id`)).length,
+      1,
+      "The owner can delete a published post with its current version",
+    );
+    for (const table of ["public.bookmarks", "private.post_views", "private.post_revisions"]) {
+      assert.equal((await db.query(`select * from ${table} where post_id='${published}'`)).rows.length, 0,
+        `Deleting a post removes its ${table}`);
+    }
+    assert.equal((await as("anon", null, "select * from public.posts")).length, 0);
+    assert.equal((await as("authenticated", owner, "select * from public.post_stats()")).length, 1);
+    assert.equal(
+      (await as("authenticated", owner, `delete from public.posts where id='${draft}' returning id`)).length,
+      1,
+      "The owner can delete a draft",
+    );
+    const scheduled = await as("authenticated", owner,
+      "insert into public.posts(title,slug,body,category,status,published_at) values ('Scheduled','scheduled','Future article','News','published',now()+interval '1 day') returning id");
+    assert.equal(
+      (await as("authenticated", owner, `delete from public.posts where id='${scheduled[0].id}' returning id`)).length,
+      1,
+      "The owner can delete a scheduled post",
     );
   } finally {
     await db.close();
