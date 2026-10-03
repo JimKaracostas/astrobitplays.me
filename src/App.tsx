@@ -846,6 +846,11 @@ export function App({
                     <span>Jump to verdict ↓</span>
                   </a>
                 )}
+                {post.category === "Reviews" && (
+                  <a className="review-scoring-link" href="/review-scoring/">
+                    How review scores work
+                  </a>
+                )}
                 <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
                 <ArticleReader content={post.body} articleId={post.id} theme={readingTheme} onThemeChange={chooseReadingTheme} />
 
@@ -1015,6 +1020,7 @@ export function App({
             </a>
             <a href="/stories/">All stories</a>
             <a href="/feed.xml">RSS feed</a>
+            <a href="/review-scoring/">Review scoring guide</a>
             <a href="/privacy/">Privacy Policy</a>
             <a href="/terms/">Terms of Service</a>
           </nav>
