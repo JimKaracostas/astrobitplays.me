@@ -8,7 +8,7 @@ Run `supabase/migrations/202609210001_publication.sql` once in the project's SQL
 
 For post deletion, run `supabase/migrations/202610020001_post_deletion.sql` in the project's SQL Editor after the existing migrations. This grants delete access with an owner-only policy; pushing the frontend does not apply database migrations.
 
-For indexed search, run `supabase/migrations/202610030001_full_text_search.sql` after the post-deletion migration. It builds an accent-insensitive weighted search index and exposes only matching, published article summaries to readers. Until it is applied, the site uses the existing client-side search for compatibility.
+For indexed search, run `supabase/migrations/202610030001_full_text_search.sql` after the post-deletion migration. It builds an accent-insensitive weighted search index and exposes only matching, published article summaries to readers. The live RPC and reader-facing results were verified on 3 October 2026. Projects that have not applied it use the existing client-side search for compatibility.
 
 ## Authentication
 
