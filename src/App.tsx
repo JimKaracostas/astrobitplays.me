@@ -42,6 +42,12 @@ const LazyStudio = lazy(() =>
   import("./Studio").then((module) => ({ default: module.Studio })),
 );
 const noSavedArticles: string[] = [];
+const reviewScoreFilters = [
+  { value: "8", label: "8–10" },
+  { value: "7", label: "7–10" },
+  { value: "6", label: "6–10" },
+  { value: "below6", label: "Below 6" },
+];
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -188,6 +194,10 @@ export function App({
   const [listingCategory, setListingCategory] = useState<Category | "">(() => {
     const category = params.get("category") || "";
     return categories.includes(category as Category) ? category as Category : "";
+  });
+  const [listingScore, setListingScore] = useState(() => {
+    const score = params.get("score") || "";
+    return reviewScoreFilters.some((filter) => filter.value === score) ? score : "";
   });
   const [listingSort, setListingSort] = useState<StorySort>(() => {
     const sort = params.get("sort");
@@ -625,43 +635,64 @@ export function App({
       setSharing(false);
     }
   }
-  function updateListingUrl(category: Category | "", sort: StorySort) {
+  function updateListingUrl(category: Category | "", sort: StorySort, score = listingScore) {
     const url = new URL(window.location.href);
     if (category) url.searchParams.set("category", category);
     else url.searchParams.delete("category");
     const defaultSort: StorySort = query.trim() ? "relevance" : "newest";
     if (sort === defaultSort) url.searchParams.delete("sort");
     else url.searchParams.set("sort", sort);
+    if (score) url.searchParams.set("score", score);
+    else url.searchParams.delete("score");
     window.history.replaceState(window.history.state, "", url);
   }
   function changeListingCategory(category: Category | "") {
     setListingCategory(category);
+    const score = section === "Reviews" || category === "Reviews" ? listingScore : "";
+    setListingScore(score);
     setLimit(12);
-    updateListingUrl(category, listingSort);
+    updateListingUrl(category, listingSort, score);
   }
   function changeListingSort(sort: StorySort) {
     setListingSort(sort);
     setLimit(12);
     updateListingUrl(listingCategory, sort);
   }
+  function changeListingScore(score: string) {
+    setListingScore(score);
+    setLimit(12);
+    updateListingUrl(listingCategory, listingSort, score);
+  }
+  const selectedScoreFilter = reviewScoreFilters.find((filter) => filter.value === listingScore);
+  const showScoreFilter = page !== "saved" && (section === "Reviews" || listingCategory === "Reviews" || !!selectedScoreFilter);
   const filtered = useMemo(
     () => {
-      if (!searchRanked) return discoverStories(posts, {
-        query, category: (section as Category) || listingCategory,
-        sort: listingSort, savedIds: page === "saved" ? saved : undefined,
+      let results: Post[];
+      if (!searchRanked) {
+        results = discoverStories(posts, {
+          query, category: (section as Category) || listingCategory,
+          sort: listingSort, savedIds: page === "saved" ? saved : undefined,
+        });
+      } else {
+        const savedSet = page === "saved" ? new Set(saved) : null;
+        results = posts.filter((post) =>
+          (!(section || listingCategory) || post.category === (section || listingCategory)) &&
+          (!savedSet || savedSet.has(post.id))
+        );
+        if (listingSort !== "relevance") results.sort((a, b) => {
+          const dates = (a.published_at || "").localeCompare(b.published_at || "");
+          return (listingSort === "oldest" ? dates : -dates) || a.id.localeCompare(b.id);
+        });
+      }
+      if (!selectedScoreFilter) return results;
+      return results.filter((post) => {
+        if (post.category !== "Reviews" || post.score === null) return false;
+        return selectedScoreFilter.value === "below6"
+          ? post.score < 6
+          : post.score >= Number(selectedScoreFilter.value);
       });
-      const savedSet = page === "saved" ? new Set(saved) : null;
-      const results = posts.filter((post) =>
-        (!(section || listingCategory) || post.category === (section || listingCategory)) &&
-        (!savedSet || savedSet.has(post.id))
-      );
-      if (listingSort !== "relevance") results.sort((a, b) => {
-        const dates = (a.published_at || "").localeCompare(b.published_at || "");
-        return (listingSort === "oldest" ? dates : -dates) || a.id.localeCompare(b.id);
-      });
-      return results;
     },
-    [posts, query, section, listingCategory, listingSort, page, saved, searchRanked],
+    [posts, query, section, listingCategory, listingSort, page, saved, searchRanked, selectedScoreFilter],
   );
   const listing = !!section || params.has("q") || page === "saved";
   return (
@@ -973,6 +1004,13 @@ export function App({
                     </button>
                   ))}
                 </div>}
+                {showScoreFilter && <label className="discovery-sort">
+                  <span>Score</span>
+                  <select aria-label="Filter reviews by score" value={listingScore} onChange={(event) => changeListingScore(event.target.value)}>
+                    <option value="">Any score</option>
+                    {reviewScoreFilters.map((filter) => <option key={filter.value} value={filter.value}>{filter.label}</option>)}
+                  </select>
+                </label>}
                 <label className="discovery-sort"><span>Sort by</span>
                   <select value={listingSort} onChange={(event) => changeListingSort(event.target.value as StorySort)}>
                     {query.trim() && <option value="relevance">Best match</option>}
@@ -980,7 +1018,7 @@ export function App({
                     <option value="oldest">Oldest first</option>
                   </select>
                 </label>
-                <p className="discovery-count" role="status">{filtered.length} {filtered.length === 1 ? "article" : "articles"}{query.trim() ? ` matching “${query.trim()}”` : ""}</p>
+                <p className="discovery-count" role="status">{filtered.length} {filtered.length === 1 ? "article" : "articles"}{selectedScoreFilter ? ` rated ${selectedScoreFilter.label}` : ""}{query.trim() ? ` matching “${query.trim()}”` : ""}</p>
               </div>
             )}
             {page === "saved" && (!authReady || !roleReady || (user && bookmarksLoading)) ? (
@@ -1016,9 +1054,10 @@ export function App({
             ) : (
               <div className="discovery-empty">
                 <Search size={28} aria-hidden="true" />
-                <h2>{query.trim() ? "No matching articles" : listingCategory ? `No ${listingCategory.toLowerCase()}${page === "saved" ? " in your reading list" : " here yet"}` : page === "saved" ? "Your reading list starts here" : "No articles here yet"}</h2>
-                <p>{query.trim() ? "Try a game title, developer or a shorter search." : listingCategory ? "Clear the category filter to see all articles." : page === "saved" ? "Open a story and choose Save article to keep it for later." : "New stories will appear here as they’re published."}</p>
+                <h2>{query.trim() ? "No matching articles" : selectedScoreFilter ? `No reviews rated ${selectedScoreFilter.label}` : listingCategory ? `No ${listingCategory.toLowerCase()}${page === "saved" ? " in your reading list" : " here yet"}` : page === "saved" ? "Your reading list starts here" : "No articles here yet"}</h2>
+                <p>{query.trim() ? "Try a game title, developer or a shorter search." : selectedScoreFilter ? "Choose another score range or clear this filter to see more reviews." : listingCategory ? "Clear the category filter to see all articles." : page === "saved" ? "Open a story and choose Save article to keep it for later." : "New stories will appear here as they’re published."}</p>
                 {listingCategory && <button className="button secondary" onClick={() => changeListingCategory("")}>Clear category filter</button>}
+                {selectedScoreFilter && <button className="button secondary" onClick={() => changeListingScore("")}>Clear score filter</button>}
                 <a className="text-link" href="/">Explore top stories</a>
               </div>
             )}
