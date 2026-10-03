@@ -12,6 +12,7 @@ Live Domain: [https://astrobitplays.me](https://astrobitplays.me)
 - Google and email-link sign-in and reader accounts.
 - Ranked, accent-insensitive search with category filters, sorting and useful empty states.
 - Article section navigation, reading progress, remembered text size and print layouts.
+- YouTube players load only on play, with keyboard controls, a close button and direct video links.
 - One database-designated owner with a private publishing dashboard.
 - Markdown editor and preview, covers, YouTube embeds, scores, featured posts, drafts, unpublishing and owner-only post deletion.
 - Recorded article-read totals and last-30-day counts. No simulated analytics.

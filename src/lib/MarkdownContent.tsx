@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { safeImage, placeholder, youtubeId } from "./content";
 import { remarkHeadingIds } from "./reader";
+import { VideoEmbed } from "../VideoEmbed";
 
 function collectText(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
@@ -44,6 +45,17 @@ function tweet(value: string) {
   } catch {
     return null;
   }
+}
+
+function videoTitle(node: ReactNode, id: string): string | undefined {
+  if (Array.isArray(node)) return node.map((item) => videoTitle(item, id)).find(Boolean);
+  if (node && typeof node === "object" && "props" in node) {
+    const props = node.props as { href?: string; children?: ReactNode };
+    const label = collectText(props.children).trim();
+    if (youtubeId(props.href) === id && label && !youtubeId(label)) return label.slice(0, 200);
+    return videoTitle(props.children, id);
+  }
+  return undefined;
 }
 
 export function MarkdownContent({ content }: { content: string }) {
@@ -106,14 +118,7 @@ export function MarkdownContent({ content }: { content: string }) {
                 ))}
               {videos.map((id) => (
                 <div className="body-embed-wrapper" key={id}>
-                  <iframe
-                    className="video body-video"
-                    src={`https://www.youtube-nocookie.com/embed/${id}`}
-                    title="YouTube video"
-                    allow="encrypted-media; picture-in-picture; fullscreen"
-                    allowFullScreen
-                    loading="lazy"
-                  />
+                  <VideoEmbed url={`https://youtu.be/${id}`} title={videoTitle(children, id)} />
                 </div>
               ))}
               {tweets.map((item) => (

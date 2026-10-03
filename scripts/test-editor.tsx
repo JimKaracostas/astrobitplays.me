@@ -71,7 +71,8 @@ test("Only recognized video hosts are embedded", () => {
       }
     />,
   );
-  assert.match(html, /youtube-nocookie\.com\/embed\/abcdefghijk/);
+  assert.match(html, /href="https:\/\/www.youtube.com\/watch\?v=abcdefghijk"/);
+  assert.doesNotMatch(html, /<iframe|src="https:\/\/.*youtube/);
   assert.match(html, /href="https:\/\/example.com"/);
   const mixed = renderToStaticMarkup(
     <MarkdownContent

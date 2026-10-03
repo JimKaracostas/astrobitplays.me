@@ -21,7 +21,6 @@ import { database, supabase, trackView } from "./lib/supabase";
 import {
   categories,
   formatDate,
-  youtubeId,
   readingTime,
 } from "./lib/content";
 import type { Category, Post, SiteSettings } from "./lib/content";
@@ -32,6 +31,7 @@ import { applyMetadata, articleUrl, pageMetadata } from "./lib/seo";
 import { discoverStories } from "./lib/discovery";
 import type { StorySort } from "./lib/discovery";
 import { CoverImage } from "./CoverImage";
+import { VideoEmbed } from "./VideoEmbed";
 import { CoverImagesContext } from "./lib/cover-images";
 import type { CoverManifest } from "./lib/cover-images";
 import { deviceBookmarksKey, readDeviceBookmarks, persistDeviceBookmarks, toggleBookmark, deviceImportIds } from "./lib/reading-list";
@@ -695,16 +695,7 @@ export function App({
                 <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
                 <ArticleReader content={post.body} />
 
-                {youtubeId(post.youtube_url) && (
-                  <iframe
-                    className="video"
-                    src={`https://www.youtube-nocookie.com/embed/${youtubeId(post.youtube_url)}`}
-                    title={`${post.title} video`}
-                    allow="encrypted-media; picture-in-picture; fullscreen"
-                    allowFullScreen
-                    loading="lazy"
-                  />
-                )}
+                <VideoEmbed url={post.youtube_url} title={`${post.title} video`} />
                 <ReviewVerdict post={post} />
               </article>
               {posts.filter(

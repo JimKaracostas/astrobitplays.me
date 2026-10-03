@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { MarkdownContent } from "./lib/MarkdownContent";
+import { VideoEmbed } from "./VideoEmbed";
 import { ReviewVerdict } from "./Publication";
 import {
   ArrowLeft,
@@ -24,7 +25,6 @@ import {
   safeImage,
   slugify,
   validatePost,
-  youtubeId,
 } from "./lib/content";
 import type { Post, PostInput } from "./lib/content";
 import {
@@ -786,14 +786,7 @@ function Editor({
             <MarkdownContent content={form.body} />
           </div>
           <ReviewVerdict post={form} />
-          {youtubeId(form.youtube_url) && (
-            <iframe
-              className="video"
-              src={`https://www.youtube-nocookie.com/embed/${youtubeId(form.youtube_url)}`}
-              title="Video preview"
-              allowFullScreen
-            />
-          )}
+          <VideoEmbed url={form.youtube_url} title="Video preview" />
         </div>
       ) : (
         <form ref={formRef} className="editor-form" onSubmit={save}>
