@@ -42,12 +42,15 @@ These are file-size reductions for the current cover, not measured changes in lo
 
 ![After: single-story homepage on desktop](07-homepage-desktop-after.png)
 
+![After: the mobile account panel](08-mobile-account-focus-after.png)
+
 ## Verification and limits
 
-- All 29 tests, lint, and the full production build pass. Tests cover malformed storage, persistence failure, duplicate saves, import eligibility, account isolation, responsive rendering, image host restrictions, proportional conversion, and small images that must not be enlarged.
+- The 32-test suite passed in the video-player pass, along with lint and a full production build. Tests cover malformed storage, persistence failure, duplicate saves, import eligibility, account isolation, responsive rendering, image host restrictions, proportional conversion, and small images that must not be enlarged. The homepage filtering change received a fresh production build and visual check.
 - Browser checks covered guest save, reload, remove, Undo, category filtering, optional sign-in, and 390 px / 320 px layouts. Account import was checked through helper and database policy tests; it was not exercised against a live signed-in account.
 - Video cards were checked before activation, after keyboard activation, and after Close. Before activation there were zero YouTube frames and zero YouTube thumbnail images. Enter loaded one player and focused the frame; Close removed it and returned focus. At 390 px the stage measures 339 × 191 px, at 320 px it measures 269 × 151 px; neither page scrolls horizontally. These DOM checks verify requests initiated by embed elements, not every browser background request.
 - A captured live mobile homepage showed its only story repeated directly under Latest reviews. The rebuilt page displays one feature, zero duplicate category cards and no blank category heading. At 390 px and desktop 1280 px the page has no horizontal overflow; the story and category/archive links remain available.
+- On a 390 px viewport, opening the account panel places focus on Saved and shows a close icon. Escape closes the panel and returns focus to its toggle. Escape also closes mobile search and returns focus to its toggle. Neither panel causes horizontal overflow.
 - Covers are processed only from the configured public Supabase cover bucket and the current external provider. Downloads have redirect, time, byte, MIME, and decoded-pixel limits. Unsupported or failed conversions retain the original image with a placeholder fallback.
 - Device storage can be blocked or cleared by the reader's browser. The UI reports when a save only lasts for the current visit. Account import preserves device saves on failure and ignores existing account duplicates.
 - The earlier owner-only post-deletion database migration still needs to be applied to the live Supabase project; this pass does not apply it.

@@ -179,6 +179,10 @@ export function App({
   const [mobileSearch, setMobileSearch] = useState(isSearch);
   const [mobileAccount, setMobileAccount] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
+  const navToggle = useRef<HTMLButtonElement>(null);
+  const mobileSearchToggle = useRef<HTMLButtonElement>(null);
+  const mobileAccountToggle = useRef<HTMLButtonElement>(null);
+  const accountLinks = useRef<HTMLDivElement>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -186,6 +190,13 @@ export function App({
     },
     [],
   );
+  useEffect(() => {
+    if (!mobileAccount) return;
+    const frame = requestAnimationFrame(() =>
+      accountLinks.current?.querySelector<HTMLElement>("a, button")?.focus({ preventScroll: true }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [mobileAccount, authReady, owner]);
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- Read device bookmarks after hydration.
     setDeviceSaved(readDeviceBookmarks());
@@ -503,7 +514,20 @@ export function App({
         Skip to content
       </a>
       <header className="site-header" onKeyDown={(event) => {
-        if (event.key === 'Escape') { setMobileSearch(false); setMobileAccount(false); }
+        if (event.key !== "Escape") return;
+        if (menu) {
+          event.preventDefault();
+          setMenu(false);
+          requestAnimationFrame(() => navToggle.current?.focus());
+        } else if (mobileAccount) {
+          event.preventDefault();
+          setMobileAccount(false);
+          requestAnimationFrame(() => mobileAccountToggle.current?.focus());
+        } else if (mobileSearch) {
+          event.preventDefault();
+          setMobileSearch(false);
+          requestAnimationFrame(() => mobileSearchToggle.current?.focus());
+        }
       }}>
         <div className="header-inner">
           <a className="brand" href="/" aria-label="AstroBitPlays home">
@@ -519,6 +543,7 @@ export function App({
             </span>
           </a>
           <button
+            ref={navToggle}
             className="menu-button icon-button"
             onClick={() => setMenu(!menu)}
             aria-label={menu ? "Close navigation" : "Open navigation"}
@@ -540,11 +565,11 @@ export function App({
               </a>
             ))}
           </nav>
-          <button className="mobile-header-action icon-button" aria-label={mobileSearch ? 'Close search' : 'Open search'} aria-expanded={mobileSearch} aria-controls="site-search" onClick={() => {
+          <button ref={mobileSearchToggle} className="mobile-header-action icon-button" aria-label={mobileSearch ? 'Close search' : 'Open search'} aria-expanded={mobileSearch} aria-controls="site-search" onClick={() => {
             setMobileSearch(!mobileSearch); setMobileAccount(false);
             if (!mobileSearch) requestAnimationFrame(() => searchInput.current?.focus());
           }}>{mobileSearch ? <X size={21} /> : <Search size={21} />}</button>
-          <button className="mobile-header-action icon-button" aria-label={mobileAccount ? 'Close account menu' : 'Open account menu'} aria-expanded={mobileAccount} aria-controls="site-account" onClick={() => { setMobileAccount(!mobileAccount); setMobileSearch(false); }}><UserRound size={21} /></button>
+          <button ref={mobileAccountToggle} className="mobile-header-action icon-button" aria-label={mobileAccount ? 'Close account menu' : 'Open account menu'} aria-expanded={mobileAccount} aria-controls="site-account" onClick={() => { setMobileAccount(!mobileAccount); setMobileSearch(false); }}>{mobileAccount ? <X size={21} /> : <UserRound size={21} />}</button>
           <form
             id="site-search"
             className={`search ${mobileSearch ? 'mobile-search-open' : ''}`}
@@ -572,7 +597,7 @@ export function App({
               defaultValue={query}
             />
           </form>
-          <div id="site-account" className={`account-links ${mobileAccount ? 'mobile-account-open' : ''}`}>
+          <div ref={accountLinks} id="site-account" className={`account-links ${mobileAccount ? 'mobile-account-open' : ''}`}>
             {!authReady ? (
               <span className="session-loading">Checking account…</span>
             ) : user ? (
