@@ -31,6 +31,7 @@ import { HomePage, ReviewVerdict } from "./Publication";
 import { applyMetadata, articleUrl, pageMetadata } from "./lib/seo";
 import { discoverStories } from "./lib/discovery";
 import type { StorySort } from "./lib/discovery";
+import type { ReadingTheme } from "./lib/reader";
 import { CoverImage } from "./CoverImage";
 import { VideoEmbed } from "./VideoEmbed";
 import { CoverImagesContext } from "./lib/cover-images";
@@ -52,10 +53,10 @@ const LazyArticleReader = lazy(() =>
     default: module.ArticleReader,
   })),
 );
-function ArticleReader({ content }: { content: string }) {
+function ArticleReader({ content, theme, onThemeChange }: { content: string; theme: ReadingTheme; onThemeChange: (theme: ReadingTheme) => void }) {
   return (
     <Suspense fallback={<p role="status">Loading article text…</p>}>
-      <LazyArticleReader content={content} />
+      <LazyArticleReader content={content} theme={theme} onThemeChange={onThemeChange} />
     </Suspense>
   );
 }
@@ -176,6 +177,7 @@ export function App({
     [limit, setLimit] = useState(12);
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [readingTheme, setReadingTheme] = useState<ReadingTheme>("light");
   const [listingCategory, setListingCategory] = useState<Category | "">(() => {
     const category = params.get("category") || "";
     return categories.includes(category as Category) ? category as Category : "";
@@ -207,6 +209,20 @@ export function App({
     },
     [],
   );
+  useEffect(() => {
+    try {
+      const preference = localStorage.getItem("astrobit:reading-theme");
+      if (preference === "dark" || preference === "light") {
+        // oxlint-disable-next-line react/set-state-in-effect -- Restore a reader preference after hydration.
+        setReadingTheme(preference);
+      }
+    } catch { /* Reading remains available without browser storage. */ }
+  }, []);
+  function chooseReadingTheme(theme: ReadingTheme) {
+    setReadingTheme(theme);
+    try { localStorage.setItem("astrobit:reading-theme", theme); }
+    catch { /* The preference still applies for this visit. */ }
+  }
   useEffect(() => {
     if (!mobileAccount) return;
     const frame = requestAnimationFrame(() =>
@@ -697,7 +713,7 @@ export function App({
       </header>
       <main
         id="main"
-        className={`site-main ${page === "studio" ? "studio-main" : ""}`}
+        className={`site-main ${page === "studio" ? "studio-main" : ""} ${slug && readingTheme === "dark" ? "reader-night-mode" : ""}`}
       >
         {accountError && (
           <p className="notice error" role="alert">
@@ -794,7 +810,7 @@ export function App({
                   </div>
                 </div>
                 <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
-                <ArticleReader content={post.body} />
+                <ArticleReader content={post.body} theme={readingTheme} onThemeChange={chooseReadingTheme} />
 
                 <VideoEmbed url={post.youtube_url} title={`${post.title} video`} />
                 <ReviewVerdict post={post} />

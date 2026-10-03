@@ -24,7 +24,7 @@ After: title matches rank above summary/body matches; all search words can match
 
 Before: a long review had multiple headings but no section navigation or text-size choice.
 
-After: an expandable outline links to real headings; duplicate, formatted, Setext and Unicode headings receive consistent unique IDs. Section jumps focus their target and keep it clear of the mobile header. The text column stays constrained while the Large option increases body text to 21px; the preference persists after reload. Reading progress tracks the body, excluding the mobile bottom-navigation area, without causing React renders during scrolling. Changing text size preserves the rendered Markdown and media. A Back to top link returns to the title. Print rules remove navigation and reader controls.
+After: an expandable outline links to real headings; duplicate, formatted, Setext and Unicode headings receive consistent unique IDs. Section jumps focus their target and keep it clear of the mobile header. The text column stays constrained while the Large option increases body text to 21px; the preference persists after reload. Readers can also switch between light and dark themes, with the choice remembered on the device. Reading progress tracks the body, excluding the mobile bottom-navigation area, without causing React renders during scrolling. Changing text size preserves the rendered Markdown and media. A Back to top link returns to the title. Print rules remove navigation and reader controls.
 
 ![Article before](02-article-before.png)
 

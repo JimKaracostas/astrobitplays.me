@@ -2259,7 +2259,7 @@ td:first-child {
   gap: 8px;
   color: var(--muted);
 }
-.reader-tools > div, .discovery-filters {
+.reader-choice-group, .discovery-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -2271,6 +2271,7 @@ td:first-child {
   border-radius: 6px;
   font-size: 14px;
 }
+.reader-tools button { display: inline-flex; align-items: center; gap: 7px; }
 .reader-tools button[aria-pressed="true"], .discovery-filters button[aria-pressed="true"] {
   background: var(--navy);
   border-color: var(--navy);
@@ -2329,6 +2330,35 @@ td:first-child {
   color: #007a9e;
   font-size: 14px;
 }
+.site-main.reader-night-mode {
+  color: #e5edf3;
+  background: #111a23;
+  --line: #344553;
+  --muted: #aebdca;
+  --navy: #0b1b2c;
+  --cyan: #3fc8ed;
+}
+.reader-night-mode .article-page h1,
+.reader-night-mode .article-body :is(h1, h2, h3, h4, h5, h6),
+.reader-night-mode .article-outline summary,
+.reader-night-mode .verdict-panel,
+.reader-night-mode .game-facts dt,
+.reader-night-mode .verdict-lists h3 { color: #f2f6f9; }
+.reader-night-mode .back-link { color: #bdcbd6; }
+.reader-night-mode .article-body a,
+.reader-night-mode .article-outline a,
+.reader-night-mode .back-to-top,
+.reader-night-mode .save-button { color: #73d9f5; }
+.reader-night-mode .article-body pre { background: #1c2934; color: #e5edf3; }
+.reader-night-mode .reader-tools button[aria-pressed="true"] {
+  background: #28536a;
+  border-color: #4ca6c4;
+  color: #fff;
+}
+.reader-night-mode .reader-tools button:focus-visible,
+.reader-night-mode .article-outline summary:focus-visible { outline-color: #73d9f5; }
+.reader-night-mode .verdict-panel { background: #1a2732; border-top-color: #3fc8ed; }
+.reader-night-mode .verdict-score { color: #73d9f5; }
 .discovery-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -2400,6 +2430,13 @@ td:first-child {
   .article-outline, .reading-progress, .back-to-top, .more-stories { display: none !important; }
   #root { padding-bottom: 0; }
   .site-main { padding: 0; }
+  .site-main.reader-night-mode { color: #111721; background: white; --muted: #596477; --line: #dce2e9; }
+  .reader-night-mode .article-page h1,
+  .reader-night-mode .article-body :is(h1, h2, h3, h4, h5, h6),
+  .reader-night-mode .verdict-panel,
+  .reader-night-mode .game-facts dt,
+  .reader-night-mode .verdict-lists h3 { color: #111721; }
+  .reader-night-mode .verdict-panel { background: white; }
   .article-page { max-width: none; }
   .article-body { max-width: none; font-size: 12pt; }
   .video-stage, .video-caption > span:first-child, .video-links button { display: none !important; }

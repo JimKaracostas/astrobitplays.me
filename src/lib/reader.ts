@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import type { Root, RootContent } from "mdast";
 
 export type ArticleSection = { id: string; title: string; depth: number };
+export type ReadingTheme = "light" | "dark";
 type TextNode = { type: string; value?: string; alt?: string | null; children?: TextNode[] };
 function headingText(node: TextNode): string {
   if (node.type === "html") return "";

@@ -11,6 +11,7 @@ Reviewed October 4, 2026 against the live site and the production build at `http
 5. **Scan the homepage — improved.** The live publication currently has one story. It appeared as the top story and then immediately reappeared under Latest reviews. The category sections now show stories left after the top-story selection, and empty sections do not render. The story archive and category links still lead to the full feed.
 6. **Search the archive — improved.** Search uses a weighted, accent-insensitive PostgreSQL index and returns only matching story summaries. This avoids downloading all article bodies for each search. Category and sort choices persist in shareable URLs. Live search returns the expected result; the current archive is too small to benchmark large-catalog performance.
 7. **See when a story changed — prepared.** Article pages can show a visible updated date sourced from content-only edit history. A database migration preserves the true editorial timestamp separately from internal indexing and settings changes.
+8. **Read comfortably in low light — improved.** Article pages offer a saved light/dark reading theme alongside text-size choices. The theme covers article content and review verdicts while leaving site navigation recognizable.
 
 ## Evidence
 
@@ -61,5 +62,6 @@ These are file-size reductions for the current cover, not measured changes in lo
 - The earlier owner-only post-deletion database migration still needs to be applied to the live Supabase project; this pass does not apply it.
 - The indexed-search migration was added on 3 October 2026 and its live RPC and reader-facing results were verified the same day. A larger archive is needed to benchmark search transfer and response time at publication scale.
 - The updated-date display and restored editorial timestamp were verified in both the local preview and on the live site.
+- The local article preview exposes accessible Light and Dark theme choices. The preference uses device storage and scopes the alternate palette to the article reading area.
 
-Next candidates: verify the owner-only deletion policy in the live database, measure search on a larger archive, and improve related-story recommendations as content grows.
+Next candidates: verify the owner-only deletion policy in the live database, visually review the dark palette at desktop and phone widths, measure search on a larger archive, and improve related-story recommendations as content grows.

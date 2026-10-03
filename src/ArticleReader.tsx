@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, ChevronDown, Type } from "lucide-react";
+import { ArrowUp, ChevronDown, Moon, Sun, Type } from "lucide-react";
 import { MarkdownContent } from "./lib/MarkdownContent";
 import { articleOutline, readingProgress } from "./lib/reader";
+import type { ReadingTheme } from "./lib/reader";
 const ReaderContent = memo(MarkdownContent);
 
-export function ArticleReader({ content }: { content: string }) {
+export function ArticleReader({ content, theme, onThemeChange }: { content: string; theme: ReadingTheme; onThemeChange: (theme: ReadingTheme) => void }) {
   const sections = useMemo(() => articleOutline(content), [content]);
   const [largeText, setLargeText] = useState(false);
   const body = useRef<HTMLDivElement>(null);
@@ -55,9 +56,13 @@ export function ArticleReader({ content }: { content: string }) {
       <div className="reading-progress" aria-hidden="true"><div ref={progress} /></div>
       <div className="reader-tools">
         <span><Type size={18} aria-hidden="true" /> Text size</span>
-        <div role="group" aria-label="Article text size">
+        <div className="reader-choice-group" role="group" aria-label="Article text size">
           <button type="button" aria-pressed={!largeText} onClick={() => chooseTextSize(false)}>Standard</button>
           <button type="button" aria-pressed={largeText} onClick={() => chooseTextSize(true)}>Large</button>
+        </div>
+        <div className="reader-choice-group" role="group" aria-label="Reading theme">
+          <button type="button" aria-pressed={theme === "light"} onClick={() => onThemeChange("light")}><Sun size={15} aria-hidden="true" /> Light</button>
+          <button type="button" aria-pressed={theme === "dark"} onClick={() => onThemeChange("dark")}><Moon size={15} aria-hidden="true" /> Dark</button>
         </div>
       </div>
       {sections.length >= 2 && (
