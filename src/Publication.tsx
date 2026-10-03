@@ -70,6 +70,13 @@ export function HomePage({
   onRetry: () => void;
 }) {
   const featured = featuredStories(posts, settings.featured_limit);
+  const featuredIds = new Set(featured.map((post) => post.id));
+  const editionSections = !loading && !error
+    ? settings.section_order.map((category) => ({
+        category,
+        articles: posts.filter((post) => post.category === category && !featuredIds.has(post.id)).slice(0, 6),
+      })).filter((section) => section.articles.length > 0)
+    : [];
   return (
     <>
       <div className="edition-heading">
@@ -133,14 +140,9 @@ export function HomePage({
           </div>
         )}
       </section>
-      {!loading && !error && (
+      {editionSections.length > 0 && (
         <div className="edition-sections">
-          {settings.section_order.map((category) => {
-            const articles = posts
-              .filter((post) => post.category === category)
-              .slice(0, 6);
-            if (!articles.length) return null;
-            return (
+          {editionSections.map(({ category, articles }) => (
               <section key={category} className="edition-section">
                 <div className="editorial-section-heading">
                   <h2>
@@ -160,8 +162,7 @@ export function HomePage({
                   ))}
                 </div>
               </section>
-            );
-          })}
+          ))}
         </div>
       )}
     </>
