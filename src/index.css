@@ -573,6 +573,31 @@ a:hover h3,
   font-size: 14px;
   margin: 22px 0;
 }
+.article-review-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #08778f;
+  border-radius: 6px;
+  background: #f5f7f8;
+  color: var(--ink);
+  font-size: 14px;
+  text-decoration: none;
+}
+.article-review-score strong {
+  color: #08778f;
+  font-size: 22px;
+}
+.article-review-score small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.article-review-score:hover { border-color: #08778f; }
+.article-review-score:focus-visible { outline: 3px solid #00a7df80; outline-offset: 3px; }
 .article-updated {
   color: var(--muted);
   font-size: 13px;
@@ -2384,6 +2409,9 @@ td:first-child {
 .reader-night-mode .article-outline summary:focus-visible { outline-color: #73d9f5; }
 .reader-night-mode .verdict-panel { background: #1a2732; border-top-color: #3fc8ed; }
 .reader-night-mode .verdict-score { color: #73d9f5; }
+.reader-night-mode .article-review-score { background: #1a2732; border-color: #344553; border-left-color: #3fc8ed; color: #f2f6f9; }
+.reader-night-mode .article-review-score strong { color: #73d9f5; }
+.reader-night-mode .article-review-score:focus-visible { outline-color: #73d9f5; }
 .reader-night-mode .reading-resume { background: #1a2732; border-color: #344553; }
 .reader-night-mode .reading-resume p { color: #bdcbd6; }
 .discovery-toolbar {

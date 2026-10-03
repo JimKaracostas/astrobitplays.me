@@ -182,7 +182,7 @@ export function ReviewVerdict({ post }: { post: Pick<Post, 'category' | 'score' 
     ? details.platforms.filter((item) => typeof item === "string").join(", ")
     : "";
   return (
-    <section className="verdict-panel" aria-label="Review verdict">
+    <section id="review-verdict" className="verdict-panel" aria-label="Review verdict">
       <div className="verdict-heading">
         <div>
           <p className="eyebrow">THE VERDICT</p>
