@@ -4,6 +4,13 @@ import "./index.css";
 import App from "./App.tsx";
 import type { Post, SiteSettings } from "./lib/content";
 import type { CoverManifest } from "./lib/cover-images";
+
+if ("serviceWorker" in navigator && window.isSecureContext) {
+  void navigator.serviceWorker.register("/sw.js").catch(() => {
+    /* The publication remains available when offline support is unavailable. */
+  });
+}
+
 let images: CoverManifest = {};
 try { images = JSON.parse(document.getElementById("cover-images")?.textContent || "{}"); }
 catch { /* Original covers remain available without generated images. */ }

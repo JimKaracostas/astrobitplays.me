@@ -41,6 +41,10 @@ const LazyStudio = lazy(() =>
   import("./Studio").then((module) => ({ default: module.Studio })),
 );
 const noSavedArticles: string[] = [];
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
 function cachedSearchRpcUnavailable() {
   try {
     return Number(window.sessionStorage.getItem("astrobit:search-rpc-unavailable")) > Date.now();
@@ -177,6 +181,7 @@ export function App({
     [limit, setLimit] = useState(12);
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [readingTheme, setReadingTheme] = useState<ReadingTheme>("light");
   const [listingCategory, setListingCategory] = useState<Category | "">(() => {
     const category = params.get("category") || "";
@@ -209,6 +214,30 @@ export function App({
     },
     [],
   );
+  useEffect(() => {
+    function onInstallAvailable(event: Event) {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    }
+    function onInstalled() {
+      setInstallPrompt(null);
+    }
+    window.addEventListener("beforeinstallprompt", onInstallAvailable);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onInstallAvailable);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+  async function installApp() {
+    if (!installPrompt) return;
+    const prompt = installPrompt;
+    setInstallPrompt(null);
+    try {
+      await prompt.prompt();
+      await prompt.userChoice;
+    } catch { /* Browser installation is an optional enhancement. */ }
+  }
   useEffect(() => {
     function focusSearch(event: KeyboardEvent) {
       if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -1029,6 +1058,7 @@ export function App({
             <a href="/stories/">All stories</a>
             <a href="/feed.xml">RSS feed</a>
             <a href="/review-scoring/">Review scoring guide</a>
+            {installPrompt && <button className="install-app-button" type="button" onClick={() => void installApp()}>Install app</button>}
             <a href="/privacy/">Privacy Policy</a>
             <a href="/terms/">Terms of Service</a>
           </nav>

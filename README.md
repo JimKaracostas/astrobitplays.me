@@ -23,6 +23,7 @@ Live Domain: [https://astrobitplays.me](https://astrobitplays.me)
 - Review verdicts, platforms, developer, release date, pros and cons.
 - Prerendered articles with social cards, sitemap and automatic content refresh.
 - RSS feed with the latest 50 published stories, available at `/feed.xml`.
+- Installable home-screen app with an offline fallback and a bounded cache of recently visited public pages and assets.
 - Logo favicons and mobile home-screen icons.
 - Responsive WebP covers sized for cards, phones and high-density screens, with original-image fallbacks.
 

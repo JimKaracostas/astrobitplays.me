@@ -377,6 +377,12 @@ a:hover h3,
 .site-footer nav a:hover {
   color: #007da6;
 }
+.site-footer nav .install-app-button {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+.site-footer nav .install-app-button:hover { color: #007da6; }
 
 .news-list article {
   padding: 24px 0;

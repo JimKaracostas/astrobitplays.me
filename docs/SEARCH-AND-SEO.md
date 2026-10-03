@@ -41,7 +41,7 @@ The domain is already verified in Search Console. Submit `https://astrobitplays.
 
 ## Icons and assets
 
-The supplied logo is encoded as a 16/32/48-pixel favicon, a 32-pixel PNG, an Apple touch icon and 192/512-pixel home-screen icons. Regenerate them on Windows with `./scripts/build-icons.ps1`. The web manifest does not install a service worker or cache private account content.
+The supplied logo is encoded as a 16/32/48-pixel favicon, a 32-pixel PNG, an Apple touch icon and 192/512-pixel home-screen icons. Regenerate them on Windows with `./scripts/build-icons.ps1`. The service worker caches recently visited public pages and same-origin static assets for offline reading. It skips query-string navigations and external requests, including Supabase, so account data is not put in the offline cache.
 
 ## Google sign-in
 

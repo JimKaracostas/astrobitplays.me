@@ -1,8 +1,9 @@
 {
   "name": "AstroBitPlays",
   "short_name": "AstroBitPlays",
+  "id": "/",
   "start_url": "/",
-  "display": "browser",
+  "display": "standalone",
   "background_color": "#0b1b2c",
   "theme_color": "#0b1b2c",
   "icons": [
