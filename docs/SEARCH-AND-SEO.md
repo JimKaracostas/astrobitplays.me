@@ -11,11 +11,13 @@ The owner dashboard supports:
 - Review details: game, platforms, developer, release date, verdict, pros and cons.
 - Homepage top-story count and section ordering.
 
-Apply both SQL migrations in chronological order on a new Supabase project. The editorial migration was confirmed applied to this project on 23 September 2026.
+Apply database migrations in chronological order on a new Supabase project. The editorial migration was confirmed applied to this project on 23 September 2026. The later post-deletion and indexed-search migrations are documented in [Supabase setup](SUPABASE-SETUP.md).
 
 ## Article pages and discovery
 
 Articles use paths such as `/news/article-slug/` and `/reviews/article-slug/`. Existing query-string article links still open and update to the clean URL.
+
+Search uses title-weighted full-text matching across titles, summaries and article text. After the indexed-search migration is applied, PostgreSQL returns only matching story summaries; the browser no longer needs to download the full text of every story just to search. Projects without that migration continue using the previous client-side search until they apply it.
 
 The production build fetches only published, due News and Reviews posts, then prerenders the homepage, category pages and full article bodies. Each article includes its own title, description, canonical URL, social-card metadata and Article or NewsArticle structured data in the original HTML. Review scores are editorial scores, never invented aggregate ratings.
 

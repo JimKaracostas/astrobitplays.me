@@ -39,6 +39,13 @@ const LazyStudio = lazy(() =>
   import("./Studio").then((module) => ({ default: module.Studio })),
 );
 const noSavedArticles: string[] = [];
+function cachedSearchRpcUnavailable() {
+  try {
+    return Number(window.sessionStorage.getItem("astrobit:search-rpc-unavailable")) > Date.now();
+  } catch {
+    return false;
+  }
+}
 const LazyArticleReader = lazy(() =>
   import("./ArticleReader").then((module) => ({
     default: module.ArticleReader,
@@ -170,6 +177,7 @@ export function App({
   const [sharing, setSharing] = useState(false);
   const [listingCategory, setListingCategory] = useState<Category | "">("");
   const [listingSort, setListingSort] = useState<StorySort>(query.trim() ? "relevance" : "newest");
+  const [searchRanked, setSearchRanked] = useState(false);
   const [reload, setReload] = useState(0);
   function retryContent() {
     setError("");
@@ -179,6 +187,7 @@ export function App({
   const [mobileSearch, setMobileSearch] = useState(isSearch);
   const [mobileAccount, setMobileAccount] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
+  const searchRpcUnavailable = useRef(cachedSearchRpcUnavailable());
   const navToggle = useRef<HTMLButtonElement>(null);
   const mobileSearchToggle = useRef<HTMLButtonElement>(null);
   const mobileAccountToggle = useRef<HTMLButtonElement>(null);
@@ -299,6 +308,33 @@ export function App({
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 20000);
     async function loadFeed() {
+      if (query.trim() && !searchRpcUnavailable.current) {
+        try {
+          const searchResults: Post[] = [];
+          for (let offset = 0; ; offset += 1000) {
+            const { data, error: searchError } = await database().rpc("search_posts", {
+              search_text: query,
+              search_category: section || null,
+              result_offset: offset,
+              result_limit: 1000,
+            }).abortSignal(controller.signal);
+            if (searchError) throw searchError;
+            const page = (data || []).map((item: Partial<Post>) => ({ ...item, body: "" }) as Post);
+            searchResults.push(...page);
+            if (page.length < 1000) break;
+          }
+          if (active) setSearchRanked(true);
+          return searchResults;
+        } catch (searchError) {
+          // Projects that have not applied the search migration keep the compatible client search.
+          if (typeof searchError === "object" && searchError && "code" in searchError && searchError.code === "PGRST202") {
+            searchRpcUnavailable.current = true;
+            try { window.sessionStorage.setItem("astrobit:search-rpc-unavailable", String(Date.now() + 10 * 60 * 1000)); }
+            catch { /* Search still falls back when session storage is unavailable. */ }
+          }
+        }
+      }
+      if (active) setSearchRanked(false);
       const all: Post[] = [];
       for (let offset = 0; ; offset += 1000) {
         const fields = query
@@ -364,7 +400,7 @@ export function App({
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [slug, query, reload]);
+  }, [slug, query, section, reload]);
   const post = posts.find((item) => item.slug === slug);
   useEffect(() => {
     applyMetadata(
@@ -501,11 +537,23 @@ export function App({
     }
   }
   const filtered = useMemo(
-    () => discoverStories(posts, {
-      query, category: (section as Category) || listingCategory,
-      sort: listingSort, savedIds: page === "saved" ? saved : undefined,
-    }),
-    [posts, query, section, listingCategory, listingSort, page, saved],
+    () => {
+      if (!searchRanked) return discoverStories(posts, {
+        query, category: (section as Category) || listingCategory,
+        sort: listingSort, savedIds: page === "saved" ? saved : undefined,
+      });
+      const savedSet = page === "saved" ? new Set(saved) : null;
+      const results = posts.filter((post) =>
+        (!(section || listingCategory) || post.category === (section || listingCategory)) &&
+        (!savedSet || savedSet.has(post.id))
+      );
+      if (listingSort !== "relevance") results.sort((a, b) => {
+        const dates = (a.published_at || "").localeCompare(b.published_at || "");
+        return (listingSort === "oldest" ? dates : -dates) || a.id.localeCompare(b.id);
+      });
+      return results;
+    },
+    [posts, query, section, listingCategory, listingSort, page, saved, searchRanked],
   );
   const listing = !!section || params.has("q") || page === "saved";
   return (

@@ -9,6 +9,7 @@ Reviewed October 2, 2026 against the live site and the production build at `http
 3. **Manage the reading list — improved.** Saved articles survive reloads, can be removed from the list, and offer Undo. Category filters, counts, sorting, and a clear filtered empty state work on desktop and phones. Failed account loading offers Retry.
 4. **Watch a video — improved.** Video cards no longer create YouTube frames or request poster images on page load. A descriptive Play button loads one player after the reader asks, transfers keyboard focus into it, and offers a Close control that unloads the player and returns focus. A direct YouTube link remains available at every stage.
 5. **Scan the homepage — improved.** The live publication currently has one story. It appeared as the top story and then immediately reappeared under Latest reviews. The category sections now show stories left after the top-story selection, and empty sections do not render. The story archive and category links still lead to the full feed.
+6. **Search the archive — payload improvement prepared.** Search can now use a weighted, accent-insensitive PostgreSQL index and return only matching story summaries. This avoids downloading all article bodies for each search. The frontend keeps its prior search path until the new database migration is applied.
 
 ## Evidence
 
@@ -54,5 +55,6 @@ These are file-size reductions for the current cover, not measured changes in lo
 - Covers are processed only from the configured public Supabase cover bucket and the current external provider. Downloads have redirect, time, byte, MIME, and decoded-pixel limits. Unsupported or failed conversions retain the original image with a placeholder fallback.
 - Device storage can be blocked or cleared by the reader's browser. The UI reports when a save only lasts for the current visit. Account import preserves device saves on failure and ignores existing account duplicates.
 - The earlier owner-only post-deletion database migration still needs to be applied to the live Supabase project; this pass does not apply it.
+- The indexed-search migration was added on 3 October 2026. The production project has not been confirmed on this migration, so live search still depends on its current database setup. The compatibility path remains available until the migration is applied.
 
-Next candidates: an accessible consent-based video preview to reduce article loading work, and related-story recommendations once there is enough published material to make them useful.
+Next candidates: apply the owner-only deletion and indexed-search migrations to the live database, then measure search payloads against a larger archive and improve related-story recommendations as content grows.
