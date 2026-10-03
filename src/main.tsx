@@ -6,7 +6,15 @@ import type { Post, SiteSettings } from "./lib/content";
 import type { CoverManifest } from "./lib/cover-images";
 
 if ("serviceWorker" in navigator && window.isSecureContext) {
-  void navigator.serviceWorker.register("/sw.js").catch(() => {
+  void navigator.serviceWorker.register("/sw.js").then(async () => {
+    if (window.location.search) return;
+    const registration = await navigator.serviceWorker.ready;
+    const assets = Array.from(document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>(
+      "script[src], link[rel='stylesheet'][href]",
+    )).map((element) => element instanceof HTMLScriptElement ? element.src : element.href)
+      .filter((url) => new URL(url).origin === window.location.origin);
+    registration.active?.postMessage({ type: "CACHE_CURRENT_PAGE", assets });
+  }).catch(() => {
     /* The publication remains available when offline support is unavailable. */
   });
 }

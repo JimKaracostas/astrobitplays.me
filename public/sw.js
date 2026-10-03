@@ -31,6 +31,33 @@ async function saveResponse(cache, request, response) {
   await Promise.all(removable.slice(0, Math.max(0, keys.length - MAX_CACHED_ITEMS)).map((key) => cache.delete(key)));
 }
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "CACHE_CURRENT_PAGE") return;
+  const clientUrl = event.source?.url;
+  if (typeof clientUrl !== "string") return;
+  const pageUrl = new URL(clientUrl);
+  if (pageUrl.origin !== self.location.origin || pageUrl.search) return;
+
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const pageRequest = new Request(pageUrl.href, { credentials: "omit" });
+    try {
+      await saveResponse(cache, pageRequest, await fetch(pageRequest));
+    } catch { /* Keep previously cached content when a request fails. */ }
+
+    const assets = Array.isArray(event.data.assets) ? event.data.assets.slice(0, 20) : [];
+    for (const value of assets) {
+      if (typeof value !== "string") continue;
+      const assetUrl = new URL(value);
+      if (assetUrl.origin !== self.location.origin || assetUrl.search || !STATIC_ASSET.test(assetUrl.pathname)) continue;
+      const assetRequest = new Request(assetUrl.href, { credentials: "omit" });
+      try {
+        await saveResponse(cache, assetRequest, await fetch(assetRequest));
+      } catch { /* Some assets can still load from the normal network. */ }
+    }
+  })());
+});
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
