@@ -22,6 +22,7 @@ import {
   categories,
   formatDate,
   readingTime,
+  wasUpdated,
 } from "./lib/content";
 import type { Category, Post, SiteSettings } from "./lib/content";
 import { defaultSettings, normalizeSettings } from "./lib/content";
@@ -741,6 +742,7 @@ export function App({
                     </time>{" "}
                     · {readingTime(post.body)}
                   </span>
+                  {wasUpdated(post) && <span className="article-updated">Updated <time dateTime={post.content_updated_at || undefined}>{formatDate(post.content_updated_at || null)}</time></span>}
                   <div className="article-actions">
                     <button
                       className="save-button"

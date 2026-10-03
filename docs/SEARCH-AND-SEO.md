@@ -19,6 +19,8 @@ Articles use paths such as `/news/article-slug/` and `/reviews/article-slug/`. E
 
 Search uses title-weighted full-text matching across titles, summaries and article text. After the indexed-search migration is applied, PostgreSQL returns only matching story summaries; the browser no longer needs to download the full text of every story just to search. Projects without that migration continue using the previous client-side search until they apply it.
 
+Article pages include a visible “Updated” date when content has changed since publication. Apply the content-update migration in [Supabase setup](SUPABASE-SETUP.md) to populate this from editorial history and keep internal indexing changes from appearing as reader-facing edits.
+
 The production build fetches only published, due News and Reviews posts, then prerenders the homepage, category pages and full article bodies. Each article includes its own title, description, canonical URL, social-card metadata and Article or NewsArticle structured data in the original HTML. Review scores are editorial scores, never invented aggregate ratings.
 
 `/sitemap.xml` and `/stories/` contain only public, due articles. Private account pages and search results are excluded from indexing. Unknown paths receive the Pages 404 shell.

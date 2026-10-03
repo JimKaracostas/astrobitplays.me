@@ -562,6 +562,11 @@ a:hover h3,
   font-size: 14px;
   margin: 22px 0;
 }
+.article-updated {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
 
 .save-button {
   display: flex;

@@ -72,9 +72,10 @@ export interface Post {
   review_details?: ReviewDetails;
   created_at: string;
   updated_at: string;
+  content_updated_at?: string | null;
   published_at: string | null;
 }
-export type PostInput = Omit<Post, "id" | "created_at" | "updated_at">;
+export type PostInput = Omit<Post, "id" | "created_at" | "updated_at" | "content_updated_at">;
 export const placeholder = "/galaxy-placeholder.png";
 export function slugify(value: string) {
   return value
@@ -169,6 +170,13 @@ export function formatDate(date: string | null) {
         timeZone: "UTC",
       }).format(new Date(date))
     : "Draft";
+}
+
+export function wasUpdated(post: Pick<Post, "published_at" | "content_updated_at">) {
+  if (!post.published_at || !post.content_updated_at) return false;
+  const published = Date.parse(post.published_at);
+  const updated = Date.parse(post.content_updated_at);
+  return Number.isFinite(published) && Number.isFinite(updated) && updated - published > 60_000;
 }
 
 export function publicationState(

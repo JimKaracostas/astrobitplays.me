@@ -1,6 +1,6 @@
 # Cover delivery and reading lists
 
-Reviewed October 2, 2026 against the live site and the production build at `http://127.0.0.1:4173/`.
+Reviewed October 4, 2026 against the live site and the production build at `http://127.0.0.1:4173/`.
 
 ## Journey and health
 
@@ -9,7 +9,8 @@ Reviewed October 2, 2026 against the live site and the production build at `http
 3. **Manage the reading list — improved.** Saved articles survive reloads, can be removed from the list, and offer Undo. Category filters, counts, sorting, and a clear filtered empty state work on desktop and phones. Failed account loading offers Retry.
 4. **Watch a video — improved.** Video cards no longer create YouTube frames or request poster images on page load. A descriptive Play button loads one player after the reader asks, transfers keyboard focus into it, and offers a Close control that unloads the player and returns focus. A direct YouTube link remains available at every stage.
 5. **Scan the homepage — improved.** The live publication currently has one story. It appeared as the top story and then immediately reappeared under Latest reviews. The category sections now show stories left after the top-story selection, and empty sections do not render. The story archive and category links still lead to the full feed.
-6. **Search the archive — payload improvement prepared.** Search can now use a weighted, accent-insensitive PostgreSQL index and return only matching story summaries. This avoids downloading all article bodies for each search. The frontend keeps its prior search path until the new database migration is applied.
+6. **Search the archive — improved.** Search uses a weighted, accent-insensitive PostgreSQL index and returns only matching story summaries. This avoids downloading all article bodies for each search. Live search returns the expected result; the current archive is too small to benchmark large-catalog performance.
+7. **See when a story changed — prepared.** Article pages can show a visible updated date sourced from content-only edit history. A database migration preserves the true editorial timestamp separately from internal indexing and settings changes.
 
 ## Evidence
 
@@ -57,5 +58,6 @@ These are file-size reductions for the current cover, not measured changes in lo
 - Device storage can be blocked or cleared by the reader's browser. The UI reports when a save only lasts for the current visit. Account import preserves device saves on failure and ignores existing account duplicates.
 - The earlier owner-only post-deletion database migration still needs to be applied to the live Supabase project; this pass does not apply it.
 - The indexed-search migration was added on 3 October 2026 and its live RPC and reader-facing results were verified the same day. A larger archive is needed to benchmark search transfer and response time at publication scale.
+- The updated-date display was checked in the local production preview. It depends on the content-update migration so database maintenance timestamps are not mistaken for editorial changes.
 
-Next candidates: verify and apply the owner-only deletion policy in the live database, measure search on a larger archive, and improve related-story recommendations as content grows.
+Next candidates: apply the owner-only deletion and content-update migrations to the live database, measure search on a larger archive, and improve related-story recommendations as content grows.
