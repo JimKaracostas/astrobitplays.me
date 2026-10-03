@@ -1984,6 +1984,22 @@ td:first-child {
   line-height: 1.7;
   font-size: 15px;
 }
+.article-correction {
+  margin: 26px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+.article-correction a {
+  color: #007a9e;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+.article-correction a:focus-visible {
+  outline: 3px solid #00a7df80;
+  outline-offset: 3px;
+}
 .media-dialog {
   width: min(850px, calc(100vw - 32px));
   max-height: 85vh;
@@ -2398,7 +2414,8 @@ td:first-child {
 .reader-night-mode .article-body a,
 .reader-night-mode .article-outline a,
 .reader-night-mode .back-to-top,
-.reader-night-mode .save-button { color: #73d9f5; }
+.reader-night-mode .save-button,
+.reader-night-mode .article-correction a { color: #73d9f5; }
 .reader-night-mode .article-body pre { background: #1c2934; color: #e5edf3; }
 .reader-night-mode .reader-tools button[aria-pressed="true"] {
   background: #28536a;

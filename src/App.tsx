@@ -856,6 +856,14 @@ export function App({
 
                 <VideoEmbed url={post.youtube_url} title={`${post.title} video`} />
                 <ReviewVerdict post={post} />
+                <p className="article-correction">
+                  Found an error or missing context?{" "}
+                  <a
+                    href={`mailto:karacostas.jim@gmail.com?subject=${encodeURIComponent(`Correction: ${post.title}`)}&body=${encodeURIComponent(`Article: ${articleUrl(post.slug, post.category)}\n\nPlease describe the correction or missing context:`)}`}
+                  >
+                    Suggest a correction
+                  </a>
+                </p>
               </article>
               {posts.filter(
                 (item) =>
