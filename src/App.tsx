@@ -190,7 +190,7 @@ export function App({
   const [sharing, setSharing] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [readingTheme, setReadingTheme] = useState<ReadingTheme>("light");
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
   const [listingCategory, setListingCategory] = useState<Category | "">(() => {
     const category = params.get("category") || "";
     return categories.includes(category as Category) ? category as Category : "";
@@ -251,16 +251,40 @@ export function App({
     } catch { /* Browser installation is an optional enhancement. */ }
   }
   useEffect(() => {
-    function updateConnection() {
-      setIsOnline(navigator.onLine);
+    let active = true;
+    let controller: AbortController | undefined;
+    async function checkConnection() {
+      controller?.abort();
+      const requestController = new AbortController();
+      controller = requestController;
+      const timeout = window.setTimeout(() => requestController.abort(), 5000);
+      try {
+        const response = await fetch(
+          `${window.location.origin}/content-version.json?connectivity=${Date.now()}`,
+          { cache: "no-store", credentials: "omit", signal: requestController.signal },
+        );
+        if (active && controller === requestController) setIsOnline(response.ok);
+      } catch {
+        if (active && controller === requestController) setIsOnline(false);
+      } finally {
+        window.clearTimeout(timeout);
+      }
     }
-    window.addEventListener("online", updateConnection);
-    window.addEventListener("offline", updateConnection);
+    function checkWhenBrowserReportsOnline() {
+      void checkConnection();
+    }
+    void checkConnection();
+    window.addEventListener("online", checkWhenBrowserReportsOnline);
+    window.addEventListener("offline", checkWhenBrowserReportsOnline);
+    const retry = isOnline ? undefined : window.setInterval(() => void checkConnection(), 30000);
     return () => {
-      window.removeEventListener("online", updateConnection);
-      window.removeEventListener("offline", updateConnection);
+      active = false;
+      controller?.abort();
+      if (retry !== undefined) window.clearInterval(retry);
+      window.removeEventListener("online", checkWhenBrowserReportsOnline);
+      window.removeEventListener("offline", checkWhenBrowserReportsOnline);
     };
-  }, []);
+  }, [isOnline]);
   useEffect(() => {
     function focusSearch(event: KeyboardEvent) {
       if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) return;
