@@ -2264,6 +2264,20 @@ td:first-child {
   flex-wrap: wrap;
   gap: 6px;
 }
+.reading-resume {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f4f8fa;
+}
+.reading-resume p { color: var(--muted); font-size: 14px; }
+.reading-resume-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.reading-resume-actions button { min-height: 44px; }
 .reader-tools button, .discovery-filters button {
   min-height: 44px;
   padding: 10px 14px;
@@ -2359,6 +2373,8 @@ td:first-child {
 .reader-night-mode .article-outline summary:focus-visible { outline-color: #73d9f5; }
 .reader-night-mode .verdict-panel { background: #1a2732; border-top-color: #3fc8ed; }
 .reader-night-mode .verdict-score { color: #73d9f5; }
+.reader-night-mode .reading-resume { background: #1a2732; border-color: #344553; }
+.reader-night-mode .reading-resume p { color: #bdcbd6; }
 .discovery-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -2421,13 +2437,14 @@ td:first-child {
   .article-outline ol { grid-template-columns: 1fr; }
   .reader-tools { flex-wrap: wrap; gap: 8px; }
   .reader-tools button, .discovery-filters button { padding-inline: 12px; }
+  .reading-resume { align-items: flex-start; flex-direction: column; }
   .discovery-sort { width: 100%; justify-content: space-between; }
   .discovery-sort select { font-size: 16px; min-width: 0; }
   .reading-list-banner { flex-direction: column; align-items: flex-start; padding: 18px; gap: 16px; }
 }
 @media print {
   .site-header, .site-footer, .mobile-tab-bar, .article-actions, .reader-tools,
-  .article-outline, .reading-progress, .back-to-top, .more-stories { display: none !important; }
+  .article-outline, .reading-progress, .reading-resume, .back-to-top, .more-stories { display: none !important; }
   #root { padding-bottom: 0; }
   .site-main { padding: 0; }
   .site-main.reader-night-mode { color: #111721; background: white; --muted: #596477; --line: #dce2e9; }

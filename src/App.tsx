@@ -53,10 +53,10 @@ const LazyArticleReader = lazy(() =>
     default: module.ArticleReader,
   })),
 );
-function ArticleReader({ content, theme, onThemeChange }: { content: string; theme: ReadingTheme; onThemeChange: (theme: ReadingTheme) => void }) {
+function ArticleReader({ content, articleId, theme, onThemeChange }: { content: string; articleId: string; theme: ReadingTheme; onThemeChange: (theme: ReadingTheme) => void }) {
   return (
     <Suspense fallback={<p role="status">Loading article text…</p>}>
-      <LazyArticleReader content={content} theme={theme} onThemeChange={onThemeChange} />
+      <LazyArticleReader content={content} articleId={articleId} theme={theme} onThemeChange={onThemeChange} />
     </Suspense>
   );
 }
@@ -810,7 +810,7 @@ export function App({
                   </div>
                 </div>
                 <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
-                <ArticleReader content={post.body} theme={readingTheme} onThemeChange={chooseReadingTheme} />
+                <ArticleReader content={post.body} articleId={post.id} theme={readingTheme} onThemeChange={chooseReadingTheme} />
 
                 <VideoEmbed url={post.youtube_url} title={`${post.title} video`} />
                 <ReviewVerdict post={post} />
