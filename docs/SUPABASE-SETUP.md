@@ -10,7 +10,7 @@ For post deletion, run `supabase/migrations/202610020001_post_deletion.sql` in t
 
 For indexed search, run `supabase/migrations/202610030001_full_text_search.sql` after the post-deletion migration. It builds an accent-insensitive weighted search index and exposes only matching, published article summaries to readers. The live RPC and reader-facing results were verified on 3 October 2026. Projects that have not applied it use the existing client-side search for compatibility.
 
-For visible article revision dates, run `supabase/migrations/202610040001_content_update_tracking.sql` after indexed search. It restores prior edit timestamps affected by the search-index backfill and tracks reader-visible content edits separately from internal database changes.
+For visible article revision dates, run `supabase/migrations/202610040001_content_update_tracking.sql` after indexed search. It restores prior edit timestamps affected by the search-index backfill and tracks reader-visible content edits separately from internal database changes. The live project's restored update timestamp and article display were verified on 4 October 2026.
 
 ## Authentication
 

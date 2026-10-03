@@ -10,7 +10,7 @@ Live Domain: [https://astrobitplays.me](https://astrobitplays.me)
 - News and Reviews categories, full-text search, and readable article URLs.
 - Device reading lists without sign-in, remove/undo controls, and optional import into private account bookmarks.
 - Google and email-link sign-in and reader accounts.
-- Ranked, accent-insensitive search with category filters, sorting and useful empty states. The optional indexed-search migration avoids downloading full article text for search.
+- Ranked, accent-insensitive search with category filters and sorting that persist in shareable URLs, plus useful empty states. The indexed-search migration avoids downloading full article text for search.
 - Article section navigation, reading progress, remembered text size and print layouts.
 - YouTube players load only on play, with keyboard controls, a close button and direct video links.
 - One database-designated owner with a private publishing dashboard.

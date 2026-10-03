@@ -12,7 +12,7 @@ The original homepage has clear brand hierarchy, category navigation and readabl
 
 Before: a query returned cards with no result count, category control or sort control. Implementation inspection also showed exact substring matching, which missed reordered words and accented variants.
 
-After: title matches rank above summary/body matches; all search words can match across fields; casing, accents and apostrophes are normalized. Category filters, chronological sorting and live result counts make the result set understandable. Empty results offer search guidance, category reset and a route back to top stories. The controls retain visible focus and at least 44px height. Narrow phone widths reflow without horizontal page scrolling.
+After: title matches rank above summary/body matches; all search words can match across fields; casing, accents and apostrophes are normalized. Category filters and chronological sorting persist in the URL, so readers can refresh or share the same result set. Live result counts make the set understandable. Empty results offer search guidance, category reset and a route back to top stories. The controls retain visible focus and at least 44px height. Narrow phone widths reflow without horizontal page scrolling.
 
 ![Search before](03-search-before.png)
 

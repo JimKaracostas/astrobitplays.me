@@ -176,8 +176,15 @@ export function App({
     [limit, setLimit] = useState(12);
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [listingCategory, setListingCategory] = useState<Category | "">("");
-  const [listingSort, setListingSort] = useState<StorySort>(query.trim() ? "relevance" : "newest");
+  const [listingCategory, setListingCategory] = useState<Category | "">(() => {
+    const category = params.get("category") || "";
+    return categories.includes(category as Category) ? category as Category : "";
+  });
+  const [listingSort, setListingSort] = useState<StorySort>(() => {
+    const sort = params.get("sort");
+    if (sort === "newest" || sort === "oldest") return sort;
+    return query.trim() ? "relevance" : "newest";
+  });
   const [searchRanked, setSearchRanked] = useState(false);
   const [reload, setReload] = useState(0);
   function retryContent() {
@@ -537,6 +544,25 @@ export function App({
       setSharing(false);
     }
   }
+  function updateListingUrl(category: Category | "", sort: StorySort) {
+    const url = new URL(window.location.href);
+    if (category) url.searchParams.set("category", category);
+    else url.searchParams.delete("category");
+    const defaultSort: StorySort = query.trim() ? "relevance" : "newest";
+    if (sort === defaultSort) url.searchParams.delete("sort");
+    else url.searchParams.set("sort", sort);
+    window.history.replaceState(window.history.state, "", url);
+  }
+  function changeListingCategory(category: Category | "") {
+    setListingCategory(category);
+    setLimit(12);
+    updateListingUrl(category, listingSort);
+  }
+  function changeListingSort(sort: StorySort) {
+    setListingSort(sort);
+    setLimit(12);
+    updateListingUrl(listingCategory, sort);
+  }
   const filtered = useMemo(
     () => {
       if (!searchRanked) return discoverStories(posts, {
@@ -828,13 +854,13 @@ export function App({
                 {!section && <div className="discovery-filters" role="group" aria-label="Filter articles by category">
                   {["", ...categories].map((category) => (
                     <button key={category} type="button" aria-pressed={listingCategory === category}
-                      onClick={() => { setListingCategory(category as Category | ""); setLimit(12); }}>
+                      onClick={() => changeListingCategory(category as Category | "")}>
                       {category || "All articles"}
                     </button>
                   ))}
                 </div>}
                 <label className="discovery-sort"><span>Sort by</span>
-                  <select value={listingSort} onChange={(event) => { setListingSort(event.target.value as StorySort); setLimit(12); }}>
+                  <select value={listingSort} onChange={(event) => changeListingSort(event.target.value as StorySort)}>
                     {query.trim() && <option value="relevance">Best match</option>}
                     <option value="newest">Newest first</option>
                     <option value="oldest">Oldest first</option>
@@ -878,7 +904,7 @@ export function App({
                 <Search size={28} aria-hidden="true" />
                 <h2>{query.trim() ? "No matching articles" : listingCategory ? `No ${listingCategory.toLowerCase()}${page === "saved" ? " in your reading list" : " here yet"}` : page === "saved" ? "Your reading list starts here" : "No articles here yet"}</h2>
                 <p>{query.trim() ? "Try a game title, developer or a shorter search." : listingCategory ? "Clear the category filter to see all articles." : page === "saved" ? "Open a story and choose Save article to keep it for later." : "New stories will appear here as they’re published."}</p>
-                {listingCategory && <button className="button secondary" onClick={() => { setListingCategory(""); setLimit(12); }}>Clear category filter</button>}
+                {listingCategory && <button className="button secondary" onClick={() => changeListingCategory("")}>Clear category filter</button>}
                 <a className="text-link" href="/">Explore top stories</a>
               </div>
             )}
