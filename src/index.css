@@ -142,6 +142,20 @@ a:hover h3,
   color: #fff;
 }
 
+.offline-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-bottom: 1px solid #efd18a;
+  background: #fff5d9;
+  color: #493500;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: center;
+}
+
 .header-inner {
   max-width: 1440px;
   margin: auto;

@@ -16,6 +16,7 @@ import {
   BookOpen,
   UserRound,
   Trash2,
+  WifiOff,
 } from "lucide-react";
 import { database, supabase, trackView } from "./lib/supabase";
 import {
@@ -183,6 +184,7 @@ export function App({
   const [sharing, setSharing] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [readingTheme, setReadingTheme] = useState<ReadingTheme>("light");
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
   const [listingCategory, setListingCategory] = useState<Category | "">(() => {
     const category = params.get("category") || "";
     return categories.includes(category as Category) ? category as Category : "";
@@ -238,6 +240,17 @@ export function App({
       await prompt.userChoice;
     } catch { /* Browser installation is an optional enhancement. */ }
   }
+  useEffect(() => {
+    function updateConnection() {
+      setIsOnline(navigator.onLine);
+    }
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
+    return () => {
+      window.removeEventListener("online", updateConnection);
+      window.removeEventListener("offline", updateConnection);
+    };
+  }, []);
   useEffect(() => {
     function focusSearch(event: KeyboardEvent) {
       if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -766,6 +779,12 @@ export function App({
           </div>
         </div>
       </header>
+      {!isOnline && (
+        <div className="offline-notice" role="status">
+          <WifiOff size={16} aria-hidden="true" />
+          <span>You’re offline. Previously visited public pages may still be available.</span>
+        </div>
+      )}
       <main
         id="main"
         className={`site-main ${page === "studio" ? "studio-main" : ""} ${slug && readingTheme === "dark" ? "reader-night-mode" : ""}`}
