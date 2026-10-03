@@ -210,6 +210,29 @@ export function App({
     [],
   );
   useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.matches("input, textarea, select, [role='textbox']") ||
+          target.closest("[role='dialog']"))
+      ) return;
+      event.preventDefault();
+      if (window.matchMedia("(max-width: 680px)").matches) {
+        setMobileSearch(true);
+        setMobileAccount(false);
+      }
+      requestAnimationFrame(() => {
+        searchInput.current?.focus();
+        searchInput.current?.select();
+      });
+    }
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+  useEffect(() => {
     try {
       const preference = localStorage.getItem("astrobit:reading-theme");
       if (preference === "dark" || preference === "light") {
@@ -683,10 +706,13 @@ export function App({
               ref={searchInput}
               type="search"
               aria-label="Search articles"
+              aria-keyshortcuts="/"
+              title="Press / to focus search"
               name="q"
               placeholder="Search articles…"
               defaultValue={query}
             />
+            <kbd className="search-shortcut" aria-hidden="true">/</kbd>
           </form>
           <div ref={accountLinks} id="site-account" className={`account-links ${mobileAccount ? 'mobile-account-open' : ''}`}>
             {!authReady ? (
