@@ -26,6 +26,19 @@
   <meta property="og:image" content="https://astrobitplays.me/logo.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:image" content="https://astrobitplays.me/logo.png" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("astrobit:reading-theme") || localStorage.getItem("astrobit:theme");
+        if (!t && window.matchMedia("(prefers-color-scheme: dark)").matches) t = "dark";
+        if (t === "dark") {
+          document.documentElement.classList.add("theme-dark");
+          document.documentElement.setAttribute("data-theme", "dark");
+          document.documentElement.style.colorScheme = "dark";
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>

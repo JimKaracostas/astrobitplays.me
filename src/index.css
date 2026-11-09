@@ -7,7 +7,7 @@
 :root {
   font-family: Arial, Helvetica, sans-serif;
   color: #111721;
-  background: #fff;
+  background-color: var(--site-bg, #fff);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,14 +15,29 @@
   --cyan: #00a7df;
   --muted: #596477;
   --line: #dce2e9;
+  --site-bg: #ffffff;
+  --site-text: #111721;
 }
 
-* {
-  box-sizing: border-box;
+html {
+  background-color: var(--site-bg);
+  color: var(--site-text);
+  min-height: 100%;
 }
 
 body {
   margin: 0;
+  background-color: var(--site-bg);
+  color: var(--site-text);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--site-bg);
+  color: var(--site-text);
 }
 
 button,
@@ -2476,36 +2491,42 @@ td:first-child {
 }
 .site-main.reader-night-mode {
   color: #e5edf3;
-  background: #0d1520;
+  background-color: transparent !important;
   --line: #223446;
   --muted: #94a7ba;
   --navy: #08111a;
   --cyan: #38bdf8;
 }
+
+:root.theme-dark,
 :root[data-theme="dark"],
-.theme-dark {
+html.theme-dark,
+html[data-theme="dark"] {
   color-scheme: dark;
-  color: #e5edf3;
-  background: #0d1520;
-  --line: #223446;
-  --muted: #94a7ba;
   --navy: #08111a;
   --cyan: #38bdf8;
+  --muted: #94a7ba;
+  --line: #223446;
+  --site-bg: #0b1118;
+  --site-text: #e5edf3;
+  background-color: #0b1118 !important;
+  color: #e5edf3 !important;
 }
 
-.theme-dark body {
-  background: #0d1520;
-  color: #e5edf3;
+html.theme-dark body,
+html.theme-dark #root,
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root,
+.theme-dark body,
+.theme-dark #root {
+  background-color: #0b1118 !important;
+  color: #e5edf3 !important;
 }
 
-.theme-dark .site-header {
-  background: #08111a;
-  border-bottom: 1px solid #1a2838;
-}
-
-.theme-dark .site-main {
-  color: #e5edf3;
-  background: #0d1520;
+.theme-dark .site-main,
+.theme-dark .site-main.reader-night-mode {
+  background-color: transparent !important;
+  color: #e5edf3 !important;
 }
 
 .theme-dark .site-footer {

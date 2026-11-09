@@ -781,6 +781,7 @@ export function App({
             if (!mobileSearch) requestAnimationFrame(() => searchInput.current?.focus());
           }}>{mobileSearch ? <X size={21} /> : <Search size={21} />}</button>
           <button ref={mobileAccountToggle} className="mobile-header-action icon-button" aria-label={mobileAccount ? 'Close account menu' : 'Open account menu'} aria-expanded={mobileAccount} aria-controls="site-account" onClick={() => { setMobileAccount(!mobileAccount); setMobileSearch(false); }}>{mobileAccount ? <X size={21} /> : <UserRound size={21} />}</button>
+          <button className="mobile-header-action icon-button" type="button" onClick={toggleTheme} aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}>{theme === "dark" ? <Sun size={21} aria-hidden="true" /> : <Moon size={21} aria-hidden="true" />}</button>
           <form
             id="site-search"
             className={`search ${mobileSearch ? 'mobile-search-open' : ''}`}
