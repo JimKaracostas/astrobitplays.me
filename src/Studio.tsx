@@ -545,17 +545,6 @@ function Editor({
       );
     }
   }, [form, dirty, storageKey, baseUpdatedAt]);
-  useEffect(() => {
-    function shortcut(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        if (!busy && !uploading && !inlineUploading && !preview)
-          formRef.current?.requestSubmit();
-      }
-    }
-    window.addEventListener("keydown", shortcut);
-    return () => window.removeEventListener("keydown", shortcut);
-  }, [busy, uploading, inlineUploading, preview]);
   function removeBackup() {
     try {
       sessionStorage.removeItem(storageKey);

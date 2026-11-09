@@ -17,6 +17,8 @@ import {
   UserRound,
   Trash2,
   WifiOff,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { database, supabase, trackView } from "./lib/supabase";
 import {
@@ -189,7 +191,25 @@ export function App({
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
-  const [readingTheme, setReadingTheme] = useState<ReadingTheme>("light");
+  const [theme, setTheme] = useState<ReadingTheme>(() => {
+    try {
+      const saved =
+        localStorage.getItem("astrobit:reading-theme") ||
+        localStorage.getItem("astrobit:theme");
+      if (saved === "dark" || saved === "light") return saved;
+    } catch {
+      /* Reading remains available without browser storage. */
+    }
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    ) {
+      return "dark";
+    }
+    return "light";
+  });
+  const [searchDraft, setSearchDraft] = useState<string | null>(null);
+  const searchQuery = searchDraft ?? query;
   const [isOnline, setIsOnline] = useState(true);
   const [listingCategory, setListingCategory] = useState<Category | "">(() => {
     const category = params.get("category") || "";
@@ -286,41 +306,21 @@ export function App({
     };
   }, [isOnline]);
   useEffect(() => {
-    function focusSearch(event: KeyboardEvent) {
-      if (event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey) return;
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          target.matches("input, textarea, select, [role='textbox']") ||
-          target.closest("[role='dialog']"))
-      ) return;
-      event.preventDefault();
-      if (window.matchMedia("(max-width: 680px)").matches) {
-        setMobileSearch(true);
-        setMobileAccount(false);
-      }
-      requestAnimationFrame(() => {
-        searchInput.current?.focus();
-        searchInput.current?.select();
-      });
-    }
-    window.addEventListener("keydown", focusSearch);
-    return () => window.removeEventListener("keydown", focusSearch);
-  }, []);
-  useEffect(() => {
     try {
-      const preference = localStorage.getItem("astrobit:reading-theme");
-      if (preference === "dark" || preference === "light") {
-        // oxlint-disable-next-line react/set-state-in-effect -- Restore a reader preference after hydration.
-        setReadingTheme(preference);
-      }
-    } catch { /* Reading remains available without browser storage. */ }
-  }, []);
-  function chooseReadingTheme(theme: ReadingTheme) {
-    setReadingTheme(theme);
-    try { localStorage.setItem("astrobit:reading-theme", theme); }
-    catch { /* The preference still applies for this visit. */ }
+      localStorage.setItem("astrobit:reading-theme", theme);
+      localStorage.setItem("astrobit:theme", theme);
+    } catch {
+      /* Reading remains available without browser storage. */
+    }
+    document.documentElement.classList.toggle("theme-dark", theme === "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.style.colorScheme = theme;
+  }, [theme]);
+  function toggleTheme() {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }
+  function chooseReadingTheme(newTheme: ReadingTheme) {
+    setTheme(newTheme);
   }
   useEffect(() => {
     if (!mobileAccount) return;
@@ -788,9 +788,7 @@ export function App({
             role="search"
             onSubmit={(event) => {
               event.preventDefault();
-              const value = String(
-                new FormData(event.currentTarget).get("q") || "",
-              ).trim();
+              const value = searchQuery.trim();
               window.location.assign(
                 value ? `/?q=${encodeURIComponent(value)}` : "/",
               );
@@ -803,15 +801,35 @@ export function App({
               ref={searchInput}
               type="search"
               aria-label="Search articles"
-              aria-keyshortcuts="/"
-              title="Press / to focus search"
               name="q"
               placeholder="Search articles…"
-              defaultValue={query}
+              value={searchQuery}
+              onChange={(e) => setSearchDraft(e.target.value)}
             />
-            <kbd className="search-shortcut" aria-hidden="true">/</kbd>
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                aria-label="Clear search text"
+                onClick={() => {
+                  setSearchDraft("");
+                  searchInput.current?.focus();
+                }}
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            )}
           </form>
           <div ref={accountLinks} id="site-account" className={`account-links ${mobileAccount ? 'mobile-account-open' : ''}`}>
+            <button
+              className="icon-button theme-toggle-btn"
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {theme === "dark" ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+            </button>
             {!authReady ? (
               <span className="session-loading">Checking account…</span>
             ) : user ? (
@@ -842,7 +860,7 @@ export function App({
       )}
       <main
         id="main"
-        className={`site-main ${page === "studio" ? "studio-main" : ""} ${slug && readingTheme === "dark" ? "reader-night-mode" : ""}`}
+        className={`site-main ${page === "studio" ? "studio-main" : ""} ${theme === "dark" ? "reader-night-mode site-night-mode" : ""}`}
       >
         {accountError && (
           <p className="notice error" role="alert">
@@ -955,7 +973,7 @@ export function App({
                   </a>
                 )}
                 <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
-                <ArticleReader content={post.body} articleId={post.id} theme={readingTheme} onThemeChange={chooseReadingTheme} />
+                <ArticleReader content={post.body} articleId={post.id} theme={theme} onThemeChange={chooseReadingTheme} />
 
                 <VideoEmbed url={post.youtube_url} title={`${post.title} video`} />
                 <ReviewVerdict post={post} />

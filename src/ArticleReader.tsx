@@ -159,7 +159,21 @@ export function ArticleReader({ content, articleId, theme, onThemeChange }: { co
       <div ref={body} className={`article-body ${largeText ? "article-text-large" : ""}`}>
         <ReaderContent content={content} />
       </div>
-      <a className="back-to-top" href="#article-title"><ArrowUp size={16} aria-hidden="true" /> Back to top</a>
+      <a
+        className="back-to-top"
+        href="#article-title"
+        onClick={(event) => {
+          event.preventDefault();
+          window.scrollTo({
+            top: 0,
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? "auto"
+              : "smooth",
+          });
+        }}
+      >
+        <ArrowUp size={16} aria-hidden="true" /> Back to top
+      </a>
     </div>
   );
 }

@@ -56,7 +56,7 @@ The existing deployment workflow passes those variables to Vite. The client also
 
 The editor supports Markdown, preview, cover and inline image uploads up to 5 MB, categories, review scores, YouTube embeds, drafts, publishing, editing and unpublishing. Covers are public: do not upload confidential images, including for drafts. Unused uploads remain in the bucket for manual cleanup. New posts without an uploaded cover use `public/galaxy-placeholder.png`.
 
-Unsaved edits are backed up in session storage, scoped to the signed-in account and article. The backup survives reloads in that tab; use Save draft to persist it to Supabase. Download draft exports the title, summary and body as Markdown. Ctrl/Cmd+S submits the current editor form; if its status is Published, that saves publicly. Saving an existing article checks its original `updated_at` so another tab's newer save cannot be overwritten silently. If a conflict occurs, download the draft before discarding it and reopening the latest post.
+Unsaved edits are backed up in session storage, scoped to the signed-in account and article. The backup survives reloads in that tab; use Save draft to persist it to Supabase. Download draft exports the title, summary and body as Markdown. Submitting the editor form saves the post; if its status is Published, that saves publicly. Saving an existing article checks its original `updated_at` so another tab's newer save cannot be overwritten silently. If a conflict occurs, download the draft before discarding it and reopening the latest post.
 
 The dashboard supports title/category search, status filters and sorting by update time, title or recorded reads.
 
