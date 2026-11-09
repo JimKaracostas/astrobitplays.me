@@ -28,6 +28,10 @@ For Google, enable the provider in Supabase and configure a Web application OAut
 
 Authorized JavaScript origins: `https://astrobitplays.me` and `http://127.0.0.1:5173`. Configure Google's audience/consent settings for your readers. Google's callback is different from the site redirect URLs above.
 
+For Discord, enable the provider in Supabase and configure an application in the Discord Developer Portal. Use the numeric Application ID as the Client ID and provide the generated Client secret in Supabase only. In Discord OAuth2 → Redirects, add:
+
+`https://yodtnppcsmyeymbnmvsu.supabase.co/auth/v1/callback`
+
 ## Owner account
 
 1. Open the site and choose Sign in → Continue with Google (or create an email account).

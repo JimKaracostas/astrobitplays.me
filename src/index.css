@@ -1446,9 +1446,17 @@ td:first-child {
   }
 }
 
-.google-signin {
-  width: 100%;
+.auth-oauth-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 25px 0 16px;
+}
+
+.google-signin,
+.discord-signin {
+  width: 100%;
+  margin: 0;
 }
 
 .auth-divider {

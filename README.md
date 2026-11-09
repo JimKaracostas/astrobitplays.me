@@ -9,7 +9,7 @@ Live Domain: [https://astrobitplays.me](https://astrobitplays.me)
 - Responsive editorial homepage using the supplied logo and a galaxy-only placeholder derived from its background.
 - News and Reviews categories, full-text search, and readable article URLs.
 - Device reading lists without sign-in, remove/undo controls, and optional import into private account bookmarks.
-- Google and email-link sign-in and reader accounts.
+- Google, Discord and email-link sign-in and reader accounts.
 - Ranked, accent-insensitive search with category filters and sorting that persist in shareable URLs, plus useful empty states. The indexed-search migration avoids downloading full article text for search.
 - Article section navigation, reading progress, remembered text size, light/dark themes, and a continue-reading prompt saved on the device, plus print layouts.
 - YouTube players load only on play, with keyboard controls, a close button and direct video links.

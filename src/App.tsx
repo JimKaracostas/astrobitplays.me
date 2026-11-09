@@ -1248,6 +1248,24 @@ function SignIn({ onClose }: { onClose: () => void }) {
       setBusy(false);
     }
   }
+  async function discordSignIn() {
+    setBusy(true);
+    setError("");
+    try {
+      const { error: authError } = await database().auth.signInWithOAuth({
+        provider: "discord",
+        options: { redirectTo: redirect.toString() },
+      });
+      if (authError) throw authError;
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Discord sign-in couldn’t start. Please try again.",
+      );
+      setBusy(false);
+    }
+  }
   return (
     <dialog
       className="auth-dialog"
@@ -1266,13 +1284,22 @@ function SignIn({ onClose }: { onClose: () => void }) {
         {mode === "signup" ? "Create an account" : "Sign in"}
       </h2>
       <p>Save stories to read later.</p>
-      <button
-        className="button secondary google-signin"
-        disabled={busy}
-        onClick={googleSignIn}
-      >
-        Continue with Google
-      </button>
+      <div className="auth-oauth-group">
+        <button
+          className="button secondary google-signin"
+          disabled={busy}
+          onClick={googleSignIn}
+        >
+          Continue with Google
+        </button>
+        <button
+          className="button secondary discord-signin"
+          disabled={busy}
+          onClick={discordSignIn}
+        >
+          Continue with Discord
+        </button>
+      </div>
       <p className="auth-divider">or use your email</p>
       <form onSubmit={submit}>
         <label>
