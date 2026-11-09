@@ -834,12 +834,26 @@ export function App({
               <span className="session-loading">Checking account…</span>
             ) : user ? (
               <>
+                <span
+                  className="user-badge"
+                  title={user.email || ""}
+                >
+                  <UserRound size={15} aria-hidden="true" />
+                  <span className="user-badge-name">
+                    {user.user_metadata?.custom_claims?.global_name ||
+                      user.user_metadata?.full_name ||
+                      user.user_metadata?.user_name ||
+                      user.email?.split("@")[0] ||
+                      "Account"}
+                  </span>
+                </span>
                 <a href="/?page=saved">Saved</a>
                 {owner && <a href="/?page=studio">Dashboard</a>}
                 <button
                   className="icon-button"
                   onClick={signOut}
                   aria-label="Sign out"
+                  title="Sign out"
                 >
                   <LogOut size={18} />
                 </button>
