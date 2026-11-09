@@ -971,21 +971,23 @@ export function App({
                     </button>
                   </div>
                 </div>
-                {post.category === "Reviews" && post.score !== null && (
-                  <a
-                    className="article-review-score"
-                    href="#review-verdict"
-                    aria-label={`Review score ${post.score} out of 10. Jump to the full verdict.`}
-                  >
-                    <span>Our score</span>
-                    <strong>{post.score}<small>/10</small></strong>
-                    <span>Jump to verdict ↓</span>
-                  </a>
-                )}
                 {post.category === "Reviews" && (
-                  <a className="review-scoring-link" href="/review-scoring/">
-                    How review scores work
-                  </a>
+                  <div className="review-score-header">
+                    {post.score !== null && (
+                      <a
+                        className="article-review-score"
+                        href="#review-verdict"
+                        aria-label={`Review score ${post.score} out of 10. Jump to the full verdict.`}
+                      >
+                        <span>Our score</span>
+                        <strong>{post.score}<small>/10</small></strong>
+                        <span className="jump-hint">Jump to verdict ↓</span>
+                      </a>
+                    )}
+                    <a className="review-scoring-link" href="/review-scoring/">
+                      How review scores work
+                    </a>
+                  </div>
                 )}
                 <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
                 <ArticleReader content={post.body} articleId={post.id} theme={theme} onThemeChange={chooseReadingTheme} />
