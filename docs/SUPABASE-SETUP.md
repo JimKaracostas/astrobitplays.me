@@ -32,14 +32,26 @@ For Discord, enable the provider in Supabase and configure an application in the
 
 `https://yodtnppcsmyeymbnmvsu.supabase.co/auth/v1/callback`
 
-## Owner account
+## Owner and admin accounts
 
-1. Open the site and choose Sign in → Continue with Google (or create an email account).
-2. In Supabase Authentication → Users, find your account and copy its UUID.
-3. Replace the placeholder in `supabase/assign-owner.sql` and run it in the SQL Editor.
-4. Reload the site. Your header gains a Dashboard link. You can also open `/?page=studio`.
+1. Sign in to the site using Google, Discord, or email.
+2. In Supabase Authentication → Users, find the user account and copy its UUID.
+3. In Supabase SQL Editor, run:
 
-Owner authority comes from a private database row, not an email comparison, browser setting, user metadata, or a first-user rule. There can be only one owner row and no client can modify it. A registered reader cannot access drafts, write posts, upload covers or read analytics even with direct API calls.
+```sql
+-- Allow multiple admins (run once)
+alter table private.site_owner drop constraint if exists site_owner_singleton_check;
+alter table private.site_owner drop constraint if exists site_owner_pkey;
+alter table private.site_owner drop column if exists singleton;
+alter table private.site_owner add primary key (user_id);
+
+-- Add an admin
+insert into private.site_owner (user_id)
+values ('<USER_UUID>')
+on conflict (user_id) do nothing;
+```
+
+4. Reload the site. The user's header gains a Dashboard link and full access to `/?page=studio`. Multiple accounts can be admins simultaneously.
 
 ## Local and deployed configuration
 

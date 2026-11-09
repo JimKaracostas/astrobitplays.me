@@ -85,6 +85,12 @@ test("Database enforces owner-only publishing, reader isolation and real view co
   );
   await db.exec(deletionMigration);
   await db.exec(deletionMigration);
+  const multiAdminMigration = await readFile(
+    new URL("../supabase/migrations/202611090001_multi_admin.sql", import.meta.url),
+    "utf8",
+  );
+  await db.exec(multiAdminMigration);
+  await db.exec(multiAdminMigration);
   async function as(role, id, sql) {
     await db.exec("begin");
     try {
@@ -196,8 +202,15 @@ test("Database enforces owner-only publishing, reader isolation and real view co
       /permission denied/,
     );
     await assert.rejects(
-      db.exec(`insert into private.site_owner(user_id) values ('${reader}')`),
+      db.exec(`insert into private.site_owner(user_id) values ('${owner}')`),
       /duplicate key/,
+    );
+    const admin2 = crypto.randomUUID();
+    await db.exec(`insert into auth.users (id) values ('${admin2}')`);
+    await db.exec(`insert into private.site_owner(user_id) values ('${admin2}')`);
+    assert.equal(
+      (await as("authenticated", admin2, "select public.is_owner()"))[0].is_owner,
+      true,
     );
     await assert.rejects(
       as("authenticated", reader, "select * from public.post_stats()"),
