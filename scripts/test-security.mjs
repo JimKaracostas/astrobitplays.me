@@ -91,6 +91,12 @@ test("Database enforces owner-only publishing, reader isolation and real view co
   );
   await db.exec(multiAdminMigration);
   await db.exec(multiAdminMigration);
+  const postSavePermissionsMigration = await readFile(
+    new URL("../supabase/migrations/202611090002_post_save_permissions.sql", import.meta.url),
+    "utf8",
+  );
+  await db.exec(postSavePermissionsMigration);
+  await db.exec(postSavePermissionsMigration);
   async function as(role, id, sql) {
     await db.exec("begin");
     try {
@@ -211,6 +217,23 @@ test("Database enforces owner-only publishing, reader isolation and real view co
     assert.equal(
       (await as("authenticated", admin2, "select public.is_owner()"))[0].is_owner,
       true,
+    );
+    const admin2Post = await as(
+      "authenticated",
+      admin2,
+      "insert into public.posts(title,slug,body,category,status) values ('Admin2 Story','admin2-story','Created by second admin','News','draft') returning id",
+    );
+    assert.equal(admin2Post.length, 1);
+    const admin2Updated = await as(
+      "authenticated",
+      admin2,
+      `update public.posts set title='Admin2 Story Updated' where id='${admin2Post[0].id}' returning title`,
+    );
+    assert.equal(admin2Updated[0].title, "Admin2 Story Updated");
+    await as(
+      "authenticated",
+      admin2,
+      `delete from public.posts where id='${admin2Post[0].id}'`,
     );
     await assert.rejects(
       as("authenticated", reader, "select * from public.post_stats()"),

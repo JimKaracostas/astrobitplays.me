@@ -3,6 +3,7 @@ begin;
 
 create schema if not exists extensions;
 create extension if not exists unaccent with schema extensions;
+grant usage on schema extensions to anon, authenticated;
 
 alter table public.posts add column if not exists search_vector tsvector;
 
@@ -18,17 +19,19 @@ set search_path = '' as $$
     setweight(to_tsvector('simple', extensions.unaccent(coalesce(post_excerpt, ''))), 'B') ||
     setweight(to_tsvector('simple', extensions.unaccent(coalesce(post_body, ''))), 'C');
 $$;
-revoke all on function private.make_post_search_vector(text, text, text) from public, anon, authenticated;
+revoke all on function private.make_post_search_vector(text, text, text) from public, anon;
+grant execute on function private.make_post_search_vector(text, text, text) to authenticated;
 
 create or replace function private.refresh_post_search_vector() returns trigger
-language plpgsql
+language plpgsql security definer
 set search_path = '' as $$
 begin
   new.search_vector := private.make_post_search_vector(new.title, new.excerpt, new.body);
   return new;
 end;
 $$;
-revoke all on function private.refresh_post_search_vector() from public, anon, authenticated;
+revoke all on function private.refresh_post_search_vector() from public, anon;
+grant execute on function private.refresh_post_search_vector() to authenticated;
 
 drop trigger if exists refresh_post_search_vector on public.posts;
 create trigger refresh_post_search_vector

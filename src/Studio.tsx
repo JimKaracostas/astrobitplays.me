@@ -82,24 +82,30 @@ function StarPicker({
 }
 
 type Stat = { post_id: string; total_views: number; recent_views: number };
-function errorMessage(error: unknown) {
-  if (
-    typeof error === "object" &&
-    error &&
-    "code" in error &&
-    error.code === "23505"
-  )
-    return "That article URL is already in use. Choose a different one.";
-  if (
-    typeof error === "object" &&
-    error &&
-    "code" in error &&
-    error.code === "PGRST116"
-  )
-    return "This post changed in another tab. Download your draft, then close and reopen the post to load the latest version.";
-  return error instanceof Error
-    ? error.message
-    : "The change could not be saved. Check your connection and owner access.";
+function errorMessage(
+  error: unknown,
+  defaultMessage = "The change could not be saved. Check your connection and owner access.",
+) {
+  if (typeof error === "object" && error !== null) {
+    const err = error as {
+      code?: string;
+      message?: string;
+      details?: string;
+      hint?: string;
+    };
+    if (err.code === "23505")
+      return "That article URL is already in use. Choose a different one.";
+    if (err.code === "PGRST116")
+      return "This post changed in another tab. Download your draft, then close and reopen the post to load the latest version.";
+    if (err.code === "42501")
+      return `Database permission denied (42501): ${err.message || "Ensure your account has owner access and trigger permissions are configured."}`;
+    if (typeof err.message === "string" && err.message) {
+      const details =
+        typeof err.details === "string" && err.details ? ` (${err.details})` : "";
+      return `${err.message}${details}`;
+    }
+  }
+  return error instanceof Error ? error.message : defaultMessage;
 }
 export function Studio({ userId }: { userId: string }) {
   const [posts, setPosts] = useState<Post[]>([]),
@@ -162,13 +168,12 @@ export function Studio({ userId }: { userId: string }) {
         `“${post.title}” deleted. Search and share pages will sync automatically.`,
       );
     } catch (deleteError) {
+      console.error("Failed to delete post:", deleteError);
       setError(
-        typeof deleteError === "object" &&
-        deleteError &&
-        "code" in deleteError &&
-        deleteError.code === "PGRST116"
-          ? "This post changed or is no longer available. Refresh the list before trying to delete it again."
-          : "The post couldn’t be deleted. Check your connection and owner access, then try again.",
+        errorMessage(
+          deleteError,
+          "The post couldn’t be deleted. Check your connection and owner access, then try again.",
+        ),
       );
     } finally {
       deleteInFlight.current = false;
@@ -664,6 +669,7 @@ function Editor({
       setDirty(false);
       onSaved(result.data as Post);
     } catch (err) {
+      console.error("Failed to save post:", err);
       setError(errorMessage(err));
     } finally {
       setBusy(false);

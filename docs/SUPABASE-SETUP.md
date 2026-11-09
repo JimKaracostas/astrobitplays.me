@@ -12,6 +12,8 @@ For indexed search, run `supabase/migrations/202610030001_full_text_search.sql` 
 
 For visible article revision dates, run `supabase/migrations/202610040001_content_update_tracking.sql` after indexed search. It restores prior edit timestamps affected by the search-index backfill and tracks reader-visible content edits separately from internal database changes. The live project's restored update timestamp and article display were verified on 4 October 2026.
 
+If saving or updating posts in Studio reports a permission error, run `supabase/migrations/202611090002_post_save_permissions.sql`. It grants the required execution privileges on the search index trigger function (`private.refresh_post_search_vector`), search vector generator (`private.make_post_search_vector`), revision capture and timestamp triggers to authenticated users, and ensures the trigger runs as `SECURITY DEFINER`.
+
 ## Authentication
 
 In Authentication → URL Configuration:
