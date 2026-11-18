@@ -38,6 +38,9 @@ export async function fetchPublication(now = new Date()) {
       limit: "1000",
     })) as Post[];
     if (!Array.isArray(batch)) throw new Error("Invalid public posts response");
+    for (const item of batch) {
+      delete (item as Post & { search_vector?: unknown }).search_vector;
+    }
     posts.push(...batch);
     if (batch.length < 1000) break;
   }

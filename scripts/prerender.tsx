@@ -1,5 +1,6 @@
 import { renderToReadableStream } from "react-dom/server";
 import { App } from "../src/App";
+import { ArticleReader } from "../src/ArticleReader";
 import type { Post, SiteSettings } from "../src/lib/content";
 import { pageMetadata } from "../src/lib/seo";
 import { parseRoute } from "../src/lib/routes";
@@ -21,12 +22,22 @@ export async function renderPage(
   images: CoverManifest = {},
 ) {
   const route = parseRoute(path);
-  const seed = posts.map((post) => ({
-    ...post,
-    body: post.slug === route.slug ? post.body : "",
-  }));
+  const seed = posts.map((post) => {
+    const clean = { ...post } as Post & { search_vector?: unknown };
+    delete clean.search_vector;
+    return {
+      ...clean,
+      body: clean.slug === route.slug ? clean.body : "",
+    };
+  });
   const stream = await renderToReadableStream(
-    <App initialPosts={seed} initialSettings={settings} initialImages={images} location={path} />,
+    <App
+      initialPosts={seed}
+      initialSettings={settings}
+      initialImages={images}
+      location={path}
+      articleReader={ArticleReader}
+    />,
   );
   await stream.allReady;
   const markup = await new Response(stream).text();

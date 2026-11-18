@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 import type { Post, SiteSettings } from "./lib/content";
 import type { CoverManifest } from "./lib/cover-images";
+import { parseRoute } from "./lib/routes";
 
 if ("serviceWorker" in navigator && window.isSecureContext) {
   void navigator.serviceWorker.register("/sw.js").then(async () => {
@@ -32,17 +33,33 @@ try {
   /* The live API remains available if an old snapshot cannot be read. */
 }
 
-const app = (
-  <StrictMode>
-    <App initialPosts={initial.posts} initialSettings={initial.settings} initialImages={images} />
-  </StrictMode>
-);
-const container = document.getElementById("root")!;
-const params = new URLSearchParams(window.location.search);
-if (
-  initial.path === window.location.pathname &&
-  !["q", "page", "article", "section", "error", "error_description"].some((key) => params.has(key)) &&
-  !window.location.hash.includes("error_description")
-)
-  hydrateRoot(container, app);
-else createRoot(container).render(app);
+async function mount() {
+  const container = document.getElementById("root")!;
+  const params = new URLSearchParams(window.location.search);
+  const shouldHydrate =
+    initial.path === window.location.pathname &&
+    !["q", "page", "article", "section", "error", "error_description"].some((key) => params.has(key)) &&
+    !window.location.hash.includes("error_description");
+  const route = parseRoute(window.location.href);
+  let articleReader: (typeof import("./ArticleReader"))["ArticleReader"] | undefined;
+  if (shouldHydrate && route.slug) {
+    try {
+      articleReader = (await import("./ArticleReader")).ArticleReader;
+    } catch {
+      /* LazyArticleReader remains available as a fallback. */
+    }
+  }
+  const app = (
+    <StrictMode>
+      <App
+        initialPosts={initial.posts}
+        initialSettings={initial.settings}
+        initialImages={images}
+        articleReader={articleReader}
+      />
+    </StrictMode>
+  );
+  if (shouldHydrate) hydrateRoot(container, app);
+  else createRoot(container).render(app);
+}
+void mount();

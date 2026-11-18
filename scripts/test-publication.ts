@@ -33,8 +33,11 @@ test('Malformed saved review details cannot crash the editor', () => {
 
 test('Prerendered articles include full text, social metadata and safely escaped bootstrap data', async () => {
   const shell = '<html><head><title>Original</title></head><body><div id="root"></div></body></html>'
-  const html = await renderPage(shell, '/reviews/review-one/', [article], defaultSettings)
+  const html = await renderPage(shell, '/reviews/review-one/', [{ ...article, search_vector: "'review':1A" } as Post], defaultSettings)
   assert.match(html, /<strong>formatted text<\/strong>/)
+  assert.doesNotMatch(html, /Loading article text/)
+  assert.doesNotMatch(html, /hidden id="S:/)
+  assert.doesNotMatch(html, /search_vector/)
   assert.match(html, /property="og:title" content="Review one/)
   assert.match(html, /rel="canonical" href="https:\/\/astrobitplays.me\/reviews\/review-one\/"/)
   assert.match(html, /application\/ld\+json/)

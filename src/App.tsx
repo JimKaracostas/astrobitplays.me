@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import type { ComponentType, FormEvent, ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   Search,
@@ -61,15 +61,42 @@ function cachedSearchRpcUnavailable() {
     return false;
   }
 }
+type ArticleReaderProps = {
+  content: string;
+  articleId: string;
+  theme: ReadingTheme;
+  onThemeChange: (theme: ReadingTheme) => void;
+};
 const LazyArticleReader = lazy(() =>
   import("./ArticleReader").then((module) => ({
     default: module.ArticleReader,
   })),
 );
-function ArticleReader({ content, articleId, theme, onThemeChange }: { content: string; articleId: string; theme: ReadingTheme; onThemeChange: (theme: ReadingTheme) => void }) {
+function ArticleReader({
+  content,
+  articleId,
+  theme,
+  onThemeChange,
+  component: ReaderComponent,
+}: ArticleReaderProps & { component?: ComponentType<ArticleReaderProps> }) {
+  if (ReaderComponent) {
+    return (
+      <ReaderComponent
+        content={content}
+        articleId={articleId}
+        theme={theme}
+        onThemeChange={onThemeChange}
+      />
+    );
+  }
   return (
     <Suspense fallback={<p role="status">Loading article text…</p>}>
-      <LazyArticleReader content={content} articleId={articleId} theme={theme} onThemeChange={onThemeChange} />
+      <LazyArticleReader
+        content={content}
+        articleId={articleId}
+        theme={theme}
+        onThemeChange={onThemeChange}
+      />
     </Suspense>
   );
 }
@@ -145,11 +172,13 @@ export function App({
   initialSettings,
   initialImages = {},
   location: initialLocation,
+  articleReader,
 }: {
   initialPosts?: Post[];
   initialSettings?: SiteSettings;
   initialImages?: CoverManifest;
   location?: string;
+  articleReader?: ComponentType<ArticleReaderProps>;
 } = {}) {
   const [{ params, isSearch, unknownPath, section, query, page, slug }] =
     useState(() => parseRoute(initialLocation || window.location.href));
@@ -191,23 +220,27 @@ export function App({
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
-  const [theme, setTheme] = useState<ReadingTheme>(() => {
+  const [theme, setTheme] = useState<ReadingTheme>("light");
+  const themeInitialized = useRef(false);
+  useEffect(() => {
+    let initial: ReadingTheme = "light";
     try {
       const saved =
         localStorage.getItem("astrobit:reading-theme") ||
         localStorage.getItem("astrobit:theme");
-      if (saved === "dark" || saved === "light") return saved;
+      if (saved === "dark" || saved === "light") initial = saved;
+      else if (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches) {
+        initial = "dark";
+      }
     } catch {
-      /* Reading remains available without browser storage. */
+      if (window.matchMedia?.("(prefers-color-scheme: dark)")?.matches) {
+        initial = "dark";
+      }
     }
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-    ) {
-      return "dark";
-    }
-    return "light";
-  });
+    themeInitialized.current = true;
+    // oxlint-disable-next-line react/set-state-in-effect -- Sync reader theme after hydration to match SSR markup.
+    setTheme(initial);
+  }, []);
   const [searchDraft, setSearchDraft] = useState<string | null>(null);
   const searchQuery = searchDraft ?? query;
   const [isOnline, setIsOnline] = useState(true);
@@ -306,6 +339,7 @@ export function App({
     };
   }, [isOnline]);
   useEffect(() => {
+    if (!themeInitialized.current) return;
     try {
       localStorage.setItem("astrobit:reading-theme", theme);
       localStorage.setItem("astrobit:theme", theme);
@@ -990,7 +1024,7 @@ export function App({
                   </div>
                 )}
                 <CoverImage source={post.cover_url} alt={post.title} priority sizes="(max-width: 680px) calc(100vw - 36px), (max-width: 1100px) calc(100vw - 64px), 1000px" />
-                <ArticleReader content={post.body} articleId={post.id} theme={theme} onThemeChange={chooseReadingTheme} />
+                <ArticleReader content={post.body} articleId={post.id} theme={theme} onThemeChange={chooseReadingTheme} component={articleReader} />
 
                 <VideoEmbed url={post.youtube_url} title={`${post.title} video`} />
                 <ReviewVerdict post={post} />
