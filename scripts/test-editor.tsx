@@ -86,15 +86,55 @@ test("Inline images produce valid block structure and unsafe markup stays inert"
   const html = renderToStaticMarkup(
     <MarkdownContent
       content={
-        "![Caption](https://example.com/image.png)\n\n<script>alert(1)</script>\n\n[bad](javascript:alert(1))"
+        "![Caption](https://example.com/image.png)\n\n[![Linked](https://example.com/linked.png)](https://example.com)\n\n<script>alert(1)</script>\n\n[bad](javascript:alert(1))"
       }
     />,
   );
   assert.match(html, /<figure/);
   assert.match(html, /<figcaption[^>]*>Caption/);
+  assert.match(html, /<figcaption[^>]*>Linked/);
   assert.doesNotMatch(html, /<p><figure/);
   assert.doesNotMatch(html, /<script/);
   assert.doesNotMatch(html, /href="javascript:/);
+});
+
+test("Inline icons stay inline without figure wrappers or captions across prose, headings, lists, and tables", () => {
+  const prose = renderToStaticMarkup(
+    <MarkdownContent
+      content={
+        "55 (1 ![Platinum Trophy](https://www.powerpyx.com/wp-content/uploads/73_trophy.png), 2 ![Gold Trophy](https://www.powerpyx.com/wp-content/uploads/74_trophy.png))\n\nPress ![Up](https://www.powerpyx.com/wp-includes/images/smilies/up.png) + ![Cross](https://cdn.example.com/buttons/cross.png) to jump."
+      }
+    />,
+  );
+  assert.doesNotMatch(prose, /<figure|<figcaption|body-paragraph/);
+  assert.match(prose, /<p>55 \(1 <img class="body-inline-icon"[^>]*alt="Platinum Trophy"/);
+  assert.match(prose, /<img class="body-inline-icon"[^>]*alt="Cross"/);
+
+  const structured = renderToStaticMarkup(
+    <MarkdownContent
+      content={[
+        "### ![Gold Trophy](https://www.powerpyx.com/wp-content/uploads/74_trophy.png) Boss Clear",
+        "",
+        "- ![Bronze Trophy](https://www.powerpyx.com/wp-content/uploads/76_trophy.png) **First Trophy**",
+        "",
+        "| Icon | Detail |",
+        "| --- | --- |",
+        "| ![Platinum Trophy](https://www.powerpyx.com/wp-content/uploads/73_trophy.png) | All trophies |",
+        "| ![Photo](https://example.com/photo.jpg) | Screenshot cell |",
+        "",
+        "![Standalone Trophy](https://www.powerpyx.com/wp-content/uploads/73_trophy.png)",
+        "",
+        "Check out this screenshot:\n![Boss](https://example.com/boss.jpg)",
+      ].join("\n")}
+    />,
+  );
+  assert.doesNotMatch(structured, /<figure|<figcaption/);
+  assert.match(structured, /<h3[^>]*><img class="body-inline-icon"[^>]*alt="Gold Trophy"/);
+  assert.match(structured, /<li><img class="body-inline-icon"[^>]*alt="Bronze Trophy"/);
+  assert.match(structured, /<td><img class="body-inline-icon"[^>]*alt="Platinum Trophy"/);
+  assert.match(structured, /<td><img class="body-inline-image"[^>]*alt="Photo"/);
+  assert.match(structured, /<p><img class="body-inline-icon"[^>]*alt="Standalone Trophy"[^>]*><\/p>/);
+  assert.match(structured, /<img class="body-inline-image"[^>]*alt="Boss"/);
 });
 
 test("Cover validation agrees with the database HTTPS constraint", () => {

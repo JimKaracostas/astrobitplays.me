@@ -1686,6 +1686,24 @@ td:first-child {
   font-style: italic;
   line-height: 1.4;
 }
+.article-body img.body-inline-image,
+img.body-inline-image {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 100%;
+  height: auto;
+  margin: 0 3px;
+}
+.article-body img.body-inline-icon,
+img.body-inline-icon,
+.article-body img[src*="trophy.png"],
+.article-body img[src*="smilies"] {
+  display: inline-block;
+  vertical-align: middle;
+  height: 1.15em;
+  width: auto;
+  margin: 0 3px;
+}
 .body-embed-wrapper {
   display: block;
   margin: 28px 0;

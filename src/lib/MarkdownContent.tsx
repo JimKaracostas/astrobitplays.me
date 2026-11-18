@@ -1,9 +1,168 @@
 import type { ReactNode } from "react";
+import type { Element, ElementContent, Root, RootContent } from "hast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { safeImage, placeholder, youtubeId } from "./content";
 import { remarkHeadingIds } from "./reader";
 import { VideoEmbed } from "../VideoEmbed";
+
+type InlineToken =
+  | { kind: "text"; value: string }
+  | { kind: "break" }
+  | { kind: "img"; node: Element };
+
+const phrasingTags = new Set([
+  "a", "abbr", "b", "bdi", "bdo", "cite", "code", "data", "del", "dfn",
+  "em", "i", "ins", "kbd", "mark", "q", "rp", "rt", "ruby", "s", "samp",
+  "small", "span", "strong", "sub", "sup", "time", "u", "var", "wbr",
+]);
+const headingTags = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
+const imageContainerTags = new Set([
+  "p", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote",
+]);
+
+function isIconImageSrc(src: unknown): boolean {
+  return (
+    typeof src === "string" &&
+    (/trophy\.png/i.test(src) || /smilies/i.test(src))
+  );
+}
+
+function collectInlineTokens(children: ElementContent[], out: InlineToken[]) {
+  for (const child of children) {
+    if (child.type === "text") {
+      out.push({ kind: "text", value: child.value });
+    } else if (child.type === "element") {
+      if (child.tagName === "img") {
+        out.push({ kind: "img", node: child });
+      } else if (child.tagName === "br") {
+        out.push({ kind: "break" });
+      } else if (phrasingTags.has(child.tagName)) {
+        collectInlineTokens(child.children, out);
+      } else {
+        out.push({ kind: "break" });
+      }
+    }
+  }
+}
+
+function hasTextBeforeBreak(
+  tokens: InlineToken[],
+  start: number,
+  step: -1 | 1,
+): boolean {
+  for (let i = start + step; i >= 0 && i < tokens.length; i += step) {
+    const token = tokens[i];
+    if (token.kind === "break") return false;
+    if (token.kind !== "text") continue;
+    const nl =
+      step < 0 ? token.value.lastIndexOf("\n") : token.value.indexOf("\n");
+    const segment =
+      nl === -1
+        ? token.value
+        : step < 0
+          ? token.value.slice(nl + 1)
+          : token.value.slice(0, nl);
+    if (/\S/.test(segment)) return true;
+    if (nl !== -1) return false;
+  }
+  return false;
+}
+
+function hasSameLineText(tokens: InlineToken[], index: number): boolean {
+  return (
+    hasTextBeforeBreak(tokens, index, -1) ||
+    hasTextBeforeBreak(tokens, index, 1)
+  );
+}
+
+function classList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string") return value.split(/\s+/).filter(Boolean);
+  return [];
+}
+
+function addClassName(el: Element, name: string) {
+  const classes = classList(el.properties.className);
+  if (!classes.includes(name)) classes.push(name);
+  el.properties.className = classes;
+}
+
+function isInlineImageElement(el: Element): boolean {
+  const classes = classList(el.properties?.className);
+  return (
+    classes.includes("body-inline-icon") ||
+    classes.includes("body-inline-image")
+  );
+}
+
+function hasDescendantElement(
+  node: Element | undefined,
+  predicate: (el: Element) => boolean,
+): boolean {
+  if (!node) return false;
+  return node.children.some((child) => {
+    if (child.type !== "element") return false;
+    return predicate(child) || hasDescendantElement(child, predicate);
+  });
+}
+
+function classifyContainerImages(container: Element) {
+  const tokens: InlineToken[] = [];
+  collectInlineTokens(container.children, tokens);
+  const imgs = tokens.filter((token) => token.kind === "img");
+  if (imgs.length === 0) return;
+
+  const hasOtherContent = tokens.some(
+    (token) =>
+      token.kind === "break" ||
+      (token.kind === "text" && /\S/.test(token.value)),
+  );
+  const isStandaloneParagraph =
+    container.tagName === "p" && imgs.length === 1 && !hasOtherContent;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.kind !== "img") continue;
+    const img = token.node;
+    if (isIconImageSrc(img.properties?.src)) {
+      addClassName(img, "body-inline-icon");
+    } else if (isStandaloneParagraph) {
+      // Standalone paragraph images render as block <figure> elements with captions.
+      continue;
+    } else if (
+      headingTags.has(container.tagName) ||
+      hasSameLineText(tokens, i)
+    ) {
+      addClassName(img, "body-inline-icon");
+    } else {
+      addClassName(img, "body-inline-image");
+    }
+  }
+}
+
+/** Classifies markdown images as standalone figures, inline icons, or inline images. */
+function rehypeClassifyImages() {
+  return (tree: Root) => {
+    function visit(node: Root | RootContent) {
+      if (node.type === "element") {
+        if (imageContainerTags.has(node.tagName)) {
+          classifyContainerImages(node);
+        }
+        for (const child of node.children) {
+          if (child.type !== "element" || !phrasingTags.has(child.tagName)) {
+            visit(child);
+          }
+        }
+        return;
+      }
+      if ("children" in node) {
+        for (const child of node.children) visit(child);
+      }
+    }
+    visit(tree);
+  };
+}
 
 function collectText(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
@@ -62,12 +221,20 @@ export function MarkdownContent({ content }: { content: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkHeadingIds]}
+      rehypePlugins={[rehypeClassifyImages]}
       skipHtml
       components={{
-        img: ({ src, alt }) => (
-          <figure className="body-image-figure">
+        img: ({ src, alt, className }) => {
+          const safeSrc = src ? safeImage(src) : placeholder;
+          const classes = classList(className);
+          if (isIconImageSrc(src) && !classes.includes("body-inline-icon")) {
+            classes.push("body-inline-icon");
+          }
+          const inlineClass = classes.join(" ") || undefined;
+          const image = (
             <img
-              src={src ? safeImage(src) : placeholder}
+              className={inlineClass}
+              src={safeSrc}
               alt={alt || ""}
               loading="lazy"
               onError={(event) => {
@@ -75,9 +242,15 @@ export function MarkdownContent({ content }: { content: string }) {
                   event.currentTarget.src = placeholder;
               }}
             />
-            {alt && <figcaption className="image-caption">{alt}</figcaption>}
-          </figure>
-        ),
+          );
+          if (inlineClass) return image;
+          return (
+            <figure className="body-image-figure">
+              {image}
+              {alt && <figcaption className="image-caption">{alt}</figcaption>}
+            </figure>
+          );
+        },
         p: ({ children, node }) => {
           const urls = [...new Set(collectUrls(children))];
           const videos = [
@@ -93,25 +266,25 @@ export function MarkdownContent({ content }: { content: string }) {
           ];
           const embedUrls = urls.filter((url) => youtubeId(url) || tweet(url));
           const text = collectText(children).trim();
+          const hasFigure = hasDescendantElement(
+            node,
+            (el) => el.tagName === "img" && !isInlineImageElement(el),
+          );
+          const hasImg = hasDescendantElement(
+            node,
+            (el) => el.tagName === "img",
+          );
           // Only hide URLs that actually became embeds. Keep unrelated links and prose.
           const solelyEmbeds =
+            !hasImg &&
             embedUrls.length > 0 &&
             embedUrls
               .reduce((rest, url) => rest.split(url).join(""), text)
               .trim() === "";
-          const hasImage = node?.children.some(
-            (child) =>
-              child.type === "element" &&
-              (child.tagName === "img" ||
-                child.children.some(
-                  (inner) =>
-                    inner.type === "element" && inner.tagName === "img",
-                )),
-          );
           return (
             <>
               {!solelyEmbeds &&
-                (hasImage ? (
+                (hasFigure ? (
                   <div className="body-paragraph">{children}</div>
                 ) : (
                   <p>{children}</p>
